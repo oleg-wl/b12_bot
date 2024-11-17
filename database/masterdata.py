@@ -1,5 +1,5 @@
-from calendar import weekheader
-from datetime import datetime, timedelta, date
+from datetime import date
+import hashlib
 
 import pandas as pd
 import requests
@@ -18,7 +18,6 @@ class MasterTable:
         self.seats.append("2А.001")
         self.seats.append("2А.002")
 
-
     def _make_weekends(self, year: int):
         r = requests.get(f"https://n01.isdayoff.ru/api/getdata?year={year}&cc=ru&pre=0")
         return [int(d) for d in r.text]
@@ -33,9 +32,11 @@ class MasterTable:
 
         period = pd.date_range(start=start_day, end=end_day, freq="D")
 
-        return pd.DataFrame(period, columns=["period day"]).join(
+        df = pd.DataFrame(period, columns=["period_day"]).join(
             pd.DataFrame(weekend_days, columns=["is_weekend"]), how="left"
         )
+        df.period_day = df.period_day.dt.date
+        return df
 
     def make_table(self, start_y: int, end_y: int):
         try:
@@ -49,4 +50,14 @@ class MasterTable:
 
             self.master_table = pd.concat(
                 [self._make_calendar_list(year=y) for y in range(start_y, end_y + 1)]
-            ).join(pd.DataFrame(self.seats), how="cross")
+            ).join(pd.DataFrame(self.seats, columns=["seats"]), how="cross")
+
+    def make_password(self, passwd):
+        
+        if isinstance(passwd, int) | isinstance(passwd, str):
+            p = hashlib.sha256()
+            p.update(bytes(passwd))
+            return p.hexdigest()
+
+        else:
+            "Incorrect password input"

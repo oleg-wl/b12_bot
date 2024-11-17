@@ -27,8 +27,6 @@ class Users(Base):
         "created_at", DateTime(timezone=True), insert_default=datetime.now()
     )
 
-    def __repr__(self) -> str:
-        return f"User(uuid={self.id!r}, chat_id={self.chat_id!r}, username={self.username!r}), firstname={self.firstname!r}, created_at={self.created_at!r}"
 
 
 class Mastertable(Base):
@@ -37,9 +35,20 @@ class Mastertable(Base):
     id: Mapped[int] = mapped_column(
         "id", Integer(), nullable=False, autoincrement=True, primary_key=True
     )
-    dates: Mapped[datetime] = mapped_column("date", DateTime(timezone=True))
-    seat: Mapped[int] = mapped_column("seat", String(6))
+    seats: Mapped[int] = mapped_column("seats", String(6))
+    period_day: Mapped[datetime] = mapped_column("period_day", DateTime(timezone=True))
+    is_weekend: Mapped[int] = mapped_column("is_weekend", Integer())
+    #chat_id: Mapped[int] = mapped_column('chat_id', Integer())
+    #user: Mapped[str] = mapped_column('user', String())
     user_id: Mapped[int] = mapped_column(
-        "user_id", ForeignKey("users.id", ondelete="CASCADE")
+        "user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
     # is_free: Mapped[bool] = mapped_column('is_free', Boolean(), default=True)
+
+
+class SecureTable(Base):
+    __tablename__ = "secure"
+    id: Mapped[int] = mapped_column(
+        "id", Integer(), nullable=False, autoincrement=True, primary_key=True
+    )
+    password: Mapped[str] = mapped_column("password", String(), nullable=True)
