@@ -52,8 +52,9 @@ class MasterTable:
                 [self._make_calendar_list(year=y) for y in range(start_y, end_y + 1)]
             ).join(pd.DataFrame(self.seats, columns=["seats"]), how="cross")
 
-    def make_password(self, passwd):
-        
+    @staticmethod
+    def make_password(passwd):
+
         if isinstance(passwd, int) | isinstance(passwd, str):
             p = hashlib.sha256()
             p.update(bytes(passwd))

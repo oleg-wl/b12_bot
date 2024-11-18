@@ -72,6 +72,9 @@ class DBA_tools:
 
             # TODO: добавить проверку пароля
             if row is None:
+
+                
+
                 user = Users(
                     chat_id=chat_id,
                     username=username,
