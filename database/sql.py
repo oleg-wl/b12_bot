@@ -1,13 +1,15 @@
 import datetime
 from datetime import timedelta
-import hashlib
 from loguru import logger
 
-from sqlalchemy import select, func, create_engine, text, desc
+from sqlalchemy import select, create_engine
 from sqlalchemy.orm import Session
 
 from masterdata import MasterTable as mt
 from schema import Users, Mastertable, SecureTable
+
+FORMAT = "%d-%m-%Y"
+
 
 def _select_days(engine):
 
@@ -27,10 +29,27 @@ def _select_days(engine):
         dates = session.scalars(stmt).all()
 
     for day in dates:
-        logger.debug(day.strftime("%d-%m-%Y"))
+        logger.debug(day.strftime(FORMAT))
+    return dates
 
-def _select_free_seats():
-    pass
+
+def _select_free_seats(engine, date):
+    logger.debug("свободные места для даты {}".format(date))
+    # d = datetime.datetime.strptime(date, FORMAT)
+
+    with Session(engine) as session:
+        stmt = (
+            select(Mastertable.seats)
+            .order_by(Mastertable.seats)
+            .filter(
+                Mastertable.period_day == date, 
+                Mastertable.user_id == None
+            )
+        )
+        seats = session.scalars(stmt).all()
+    for s in seats:
+        logger.debug(s)
+    return seats
 
 
 def _select_my_seats():
@@ -44,27 +63,56 @@ def _book_seat():
 def _unbook_seat():
     pass
 
+
+def _check_user(engine, chat_id):
+
+    with Session(engine) as session:
+        stmt = select(Users).filter_by(chat_id=chat_id)
+        row = session.execute(stmt).first()
+
+    return row
+
+def _insert_user(engine, **kwargs):
+    
+    with Session(engine) as session:
+        
+        user = Users(
+                chat_id=kwargs.get('chat_id'),
+                username=kwargs.get('username'),
+                firstname=kwargs.get('firstname'),
+                created_at=kwargs.get('created_at'),
+            )
+        session.add(user)
+        session.commit()
+    logger.debug(f'user - {kwargs.get('username')} | chat_id - {kwargs.get('chat_id')} added')
+
 def _check_password(engine, password):
     password = mt.make_password(passwd=password)
     logger.debug(password)
-    
+
     with Session(engine) as session:
         stmt = select(SecureTable.password).where(SecureTable.password == password)
         access = session.execute(stmt).first()
 
         match access:
             case None:
-                logger.debug('acces denied')
+                logger.debug("acces denied")
                 return False
-            
+
             case _:
-                logger.debug('access granted')
+                logger.debug("access granted")
                 return True
 
     logger.debug(access)
 
+
 if __name__ == "__main__":
     eng = create_engine("sqlite:///b12.db")
-    #_select_days(engine=eng)
-    _check_password(engine=eng, password=2024)
-    _check_password(engine=eng, password=2025)
+    days = _select_days(engine=eng)
+    seats = _select_free_seats(engine=eng, date=days[0])
+
+    print(days)
+    print(seats)
+
+    # _check_password(engine=eng, password=2024)
+    # _check_password(engine=eng, password=2025)

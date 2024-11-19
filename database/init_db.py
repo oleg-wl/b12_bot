@@ -59,36 +59,12 @@ class DBA_tools:
                 logger.debug(f'password added. hash {pwd}')
                 s.commit()
 
-    def _check_user(self, **kwargs):
-
-        username = kwargs.get("username", None)
-        chat_id = kwargs.get("chat_id")
-        created_at = kwargs.get("created_at")
-        firstname = kwargs.get("firstname")
-
-        with Session() as s:
-            stmt = select(Users).filter_by(chat_id=chat_id)
-            row = s.execute(stmt).first()
-
-            # TODO: добавить проверку пароля
-            if row is None:
-
-                
-
-                user = Users(
-                    chat_id=chat_id,
-                    username=username,
-                    firstname=firstname,
-                    created_at=created_at,
-                )
-                s.add(user)
-                s.commit()
 
 
 if __name__ == "__main__":
     db = DBA_tools()
-    #db.create_db()
+    db.create_db()
     logger.debug("database created")
-    #db.insert_masterdata()
+    db.insert_masterdata()
     logger.debug("masterdata inserted")
     db.change_passwd(2025)
