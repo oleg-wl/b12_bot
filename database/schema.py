@@ -1,4 +1,5 @@
 from datetime import datetime
+from email.mime import base
 
 from sqlalchemy import ForeignKey, String, Boolean
 from sqlalchemy import Integer
@@ -28,7 +29,6 @@ class Users(Base):
     )
 
 
-
 class Mastertable(Base):
     __tablename__ = "mastertable"
 
@@ -38,8 +38,8 @@ class Mastertable(Base):
     seats: Mapped[int] = mapped_column("seats", String(6))
     period_day: Mapped[datetime.date] = mapped_column("period_day", Date())
     is_weekend: Mapped[int] = mapped_column("is_weekend", Integer())
-    #chat_id: Mapped[int] = mapped_column('chat_id', Integer())
-    #user: Mapped[str] = mapped_column('user', String())
+    # chat_id: Mapped[int] = mapped_column('chat_id', Integer())
+    # user: Mapped[str] = mapped_column('user', String())
     user_id: Mapped[int] = mapped_column(
         "user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
@@ -52,3 +52,13 @@ class SecureTable(Base):
         "id", Integer(), nullable=False, autoincrement=True, primary_key=True
     )
     password: Mapped[str] = mapped_column("password", String(), nullable=True)
+
+
+class BadUsers(Base):
+    __tablename__ = "bad_users"
+    id: Mapped[int] = mapped_column(
+        "id", Integer(), nullable=False, autoincrement=True, primary_key=True
+    )
+    chat_id: Mapped[int] = mapped_column("chat_id", Integer(), nullable=False, unique=True)
+    username: Mapped[str] = mapped_column("username", String())
+    attempt: Mapped[int] = mapped_column("attempt", Integer(), default=1)
