@@ -1,12 +1,11 @@
-#!/bin/bash python
+#!venv/bin/python
 # -*- coding: UTF-8 -*-
 
 import os
 from dotenv import load_dotenv
-import source
-
-
 import loguru
+
+import source
 
 from telegram import Update
 from telegram.ext import (

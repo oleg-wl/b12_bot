@@ -4,7 +4,7 @@ import hashlib
 import pandas as pd
 import requests
 
-from source.exceptions import IncorrectPassword
+from source.exceptions import IncorrectPasswordType
 
 class MasterTable:
 
@@ -59,7 +59,7 @@ class MasterTable:
         try:
             passwd = str(passwd).encode('utf-8')
         except:
-            raise IncorrectPassword()
+            raise IncorrectPasswordType
         else:
             p = hashlib.sha256()
             p.update(passwd)

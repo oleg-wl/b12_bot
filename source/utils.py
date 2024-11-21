@@ -20,7 +20,7 @@ class Keyboard:
 
         days_button = [
             InlineKeyboardButton("Выбрать дату", callback_data="dates"),
-            InlineKeyboardButton("Посмотреть свои места", "seats"),
+            InlineKeyboardButton("Посмотреть свои места", callback_data="seats"),
         ]
 
         return InlineKeyboardMarkup(self._build_menu(days_button, 1))

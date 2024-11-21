@@ -1,5 +1,5 @@
 # модуль с кастомными эксепшенами
 
-class IncorrectPassword(Exception):
+class IncorrectPasswordType(Exception):
     def __init__(self, message) -> None:
         super().__init__(message)

@@ -1,8 +1,8 @@
-from sqlalchemy import create_engine, text, select
+from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from schema import Base, Users, SecureTable
-from masterdata import MasterTable
+from .schema import Base, SecureTable
+from .masterdata import MasterTable
 
 import os
 from dotenv import load_dotenv
@@ -23,9 +23,7 @@ class DBA_tools:
         dbport = os.getenv("db_port")
         dbname = os.getenv("db_name", "database")
 
-        self.engine = create_engine(
-            "sqlite:///{d}.db".format(d = dbname), echo=True
-        )
+        self.engine = create_engine("sqlite:///{d}.db".format(d=dbname), echo=True)
 
         self.mt = MasterTable()
 
@@ -34,7 +32,7 @@ class DBA_tools:
         Base.metadata.create_all(self.engine)
 
     def insert_masterdata(self):
-        
+
         self.mt.make_table(start_y=2024, end_y=2026)
 
         self.mt.master_table.to_sql(
@@ -46,19 +44,21 @@ class DBA_tools:
             pwd = self.mt.make_password(passwd=passwd)
             result = s.query(SecureTable).all()
             print(pwd)
-        
+
             if len(result) == 0:
                 s.add(SecureTable(password=pwd))
-                logger.debug(f'password added. hash {pwd}')
+                logger.debug(f"password added. hash {pwd}")
                 s.commit()
-            else: 
+            else:
                 for p in result:
                     s.delete(p)
                 s.commit()
                 s.add(SecureTable(password=pwd))
-                logger.debug(f'password added. hash {pwd}')
+                logger.debug(f"password added. hash {pwd}")
                 s.commit()
 
+    def __call__(self):
+        return self.engine
 
 
 if __name__ == "__main__":

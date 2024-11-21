@@ -1,8 +1,9 @@
 # модуль для управления back-end частью
 
-from .init_db import DBA_tools #импортируем нужный класс для управления базой данных
+from .db_tools import DBA_tools
+from .sql import *
 
-db = DBA_tools()
-from sql import *
+conf = DBA_tools()
+engine = conf() 
 
 version = "0.0.1"

@@ -6,13 +6,13 @@ from sqlalchemy import select, update, insert, create_engine
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
-from masterdata import MasterTable as mt
-from schema import Users, Mastertable, SecureTable, BadUsers
+from .schema import Users, Mastertable, SecureTable, BadUsers
+from .masterdata import MasterTable as mt
 
 FORMAT = "%d-%m-%Y"
 
 
-def _select_days(engine):
+def select_days(engine):
 
     today = datetime.date.today()
     five_days = today + timedelta(days=5)
@@ -34,7 +34,7 @@ def _select_days(engine):
     return dates
 
 
-def _select_free_seats(engine, date):
+def select_free_seats(engine, date):
     logger.debug("свободные места для даты {}".format(date))
     # d = datetime.datetime.strptime(date, FORMAT)
 
@@ -53,19 +53,19 @@ def _select_free_seats(engine, date):
     return seats
 
 
-def _select_my_seats():
+def select_my_seats():
     pass
 
 
-def _book_seat():
+def book_seat():
     pass
 
 
-def _unbook_seat():
+def unbook_seat():
     pass
 
 
-def _check_user(engine, chat_id):
+def check_user(engine, chat_id):
 
     with Session(engine) as session:
         stmt = select(Users).filter_by(chat_id=chat_id)
@@ -73,7 +73,7 @@ def _check_user(engine, chat_id):
 
     return row
 
-def _insert_user(engine, **kwargs):
+def insert_user(engine, **kwargs):
     
     with Session(engine) as session:
         
@@ -88,7 +88,7 @@ def _insert_user(engine, **kwargs):
         session.commit()
     logger.debug(f'user - {kwargs.get('username')} | chat_id - {kwargs.get('chat_id')} added')
 
-def _check_password(engine, password):
+def check_password(engine, password):
     password = mt.make_password(passwd=password)
     logger.debug(password)
 
@@ -107,7 +107,7 @@ def _check_password(engine, password):
 
     logger.debug(access)
 
-def _bad_user(engine, **kwargs):
+def bad_user(engine, **kwargs):
     # добавить в таблу юзеров которые перебирают пароль
 
     with Session(engine) as session:
@@ -133,8 +133,8 @@ def _bad_user(engine, **kwargs):
 
 if __name__ == "__main__":
     eng = create_engine("sqlite:///b12.db")
-    days = _select_days(engine=eng)
-    seats = _select_free_seats(engine=eng, date=days[0])
+    days = select_days(engine=eng)
+    seats = select_free_seats(engine=eng, date=days[0])
 
     print(days)
     print(seats)
