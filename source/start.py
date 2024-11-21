@@ -17,6 +17,7 @@ from .exceptions import IncorrectPasswordType
 from .utils import Keyboard
 
 kb = Keyboard()
+kb()
 
 
 class Start:
@@ -71,6 +72,7 @@ class Start:
             if access:
                 try:
                     database.insert_user(
+                        engine=database.engine,
                         chat_id=uid,
                         username=username,
                         firstname=fname,
@@ -84,19 +86,13 @@ class Start:
                 
                 # в начало конверсейшена если эксепшен
                 # TODO: добавить эксепшены SQLA на повторный ввод пароля если ошибки базы
-                except:
+                except Exception as e:
+                    logger.exception(e)
                     await context.bot.send_message(chat_id=uid, text="some error")
                     return ConversationHandler.END
-            # если Attempt = False занести юзера в таблицу badusers и считать количество попыток
             else:
-                attempt = database.bad_user(
-                    engine=database.engine, chat_id=uid, username=username
-                )
-                # на 6 попытке сразу обрубать конверсейшен
-                if attempt > 5:
-                    return ConversationHandler.END
                 await context.bot.send_message(
-                    chat_id=uid, text="incorrect password try again"
+                    chat_id=uid, text="Incorrect password try again"
                 )
                 return self.AUTH
 

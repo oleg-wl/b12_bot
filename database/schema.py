@@ -1,7 +1,6 @@
 from datetime import datetime
-from email.mime import base
 
-from sqlalchemy import ForeignKey, String, Boolean
+from sqlalchemy import ForeignKey, String
 from sqlalchemy import Integer
 from sqlalchemy import Date, DateTime
 
@@ -52,13 +51,3 @@ class SecureTable(Base):
         "id", Integer(), nullable=False, autoincrement=True, primary_key=True
     )
     password: Mapped[str] = mapped_column("password", String(), nullable=True)
-
-
-class BadUsers(Base):
-    __tablename__ = "bad_users"
-    id: Mapped[int] = mapped_column(
-        "id", Integer(), nullable=False, autoincrement=True, primary_key=True
-    )
-    chat_id: Mapped[int] = mapped_column("chat_id", Integer(), nullable=False, unique=True)
-    username: Mapped[str] = mapped_column("username", String())
-    attempt: Mapped[int] = mapped_column("attempt", Integer(), default=1)

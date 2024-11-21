@@ -4,9 +4,8 @@ from loguru import logger
 
 from sqlalchemy import select, update, insert, create_engine
 from sqlalchemy.orm import Session
-from sqlalchemy.exc import IntegrityError
 
-from .schema import Users, Mastertable, SecureTable, BadUsers
+from .schema import Users, Mastertable, SecureTable 
 from .masterdata import MasterTable as mt
 
 FORMAT = "%d-%m-%Y"
@@ -106,29 +105,6 @@ def check_password(engine, password):
                 return True
 
     logger.debug(access)
-
-def bad_user(engine, **kwargs):
-    # добавить в таблу юзеров которые перебирают пароль
-
-    with Session(engine) as session:
-        try:
-            stmt = insert(BadUsers).values(
-                chat_id = kwargs.get('chat_id'),
-                username = kwargs.get('username')
-            ).returning(BadUsers.attempt)
-            attempt = session.scalars(stmt).first()
-            session.commit()
-            logger.debug('Bad User {} added'.format(kwargs.get['username']))
-            return attempt
-        
-        except IntegrityError:
-            stmt = select(BadUsers.attempt).where(BadUsers.chat_id == kwargs.get('chat_id'))
-            attempt = session.scalars(stmt).first() + 1
-            stmt = update(BadUsers).where(BadUsers.chat_id == kwargs.get('chat_id')).values(attempt=attempt)
-            logger.debug('Attempt {}'.format(attempt))
-            
-            return attempt
-
 
 
 if __name__ == "__main__":
