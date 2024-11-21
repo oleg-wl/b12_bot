@@ -4,6 +4,7 @@ import hashlib
 import pandas as pd
 import requests
 
+from source.exceptions import IncorrectPassword
 
 class MasterTable:
 
@@ -55,10 +56,12 @@ class MasterTable:
     @staticmethod
     def make_password(passwd):
 
-        if isinstance(passwd, int) | isinstance(passwd, str):
+        try:
+            passwd = str(passwd).encode('utf-8')
+        except:
+            raise IncorrectPassword()
+        else:
             p = hashlib.sha256()
-            p.update(bytes(passwd))
+            p.update(passwd)
             return p.hexdigest()
 
-        else:
-            "Incorrect password input"
