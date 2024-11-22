@@ -26,11 +26,10 @@ class Keyboard:
         return InlineKeyboardMarkup(self._build_menu(days_button, 1))
     
     def build_days_keyboard(self, days: list):
-        
+
         day_buttons = [InlineKeyboardButton(day, callback_data=str(i)) for i, day in enumerate(days)]
 
         return InlineKeyboardMarkup(self._build_menu(day_buttons, 1))
-
 
 
     def __call__(self) -> None:

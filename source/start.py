@@ -95,12 +95,26 @@ class Start:
                     chat_id=uid, text="Incorrect password try again"
                 )
                 return self.AUTH
+    
+    @logger.catch
+    async def dates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        uid: int = update.effective_chat.id
+        
+        days = database.select_days(engine=database.engine)
+
+        kb_days = kb.build_days_keyboard(days=days)
+
+        query = update.callback_query
+        await query.answer()
+
+        #await context.bot.send_message(chat_id=uid, text='days', reply_markup=kb_days)
+        await query.edit_message_text(text='days', reply_markup=kb_days)
+
+        return self.DATES
 
     async def seats(self):
         return ConversationHandler.END
 
-    async def dates(self):
-        return ConversationHandler.END
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 

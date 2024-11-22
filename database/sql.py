@@ -27,11 +27,9 @@ def select_days(engine):
             .distinct()
         )
         dates = session.scalars(stmt).all()
+        logger.debug(dates)
 
-    for day in dates:
-        logger.debug(day.strftime(FORMAT))
-    return dates
-
+    return [day.strftime(FORMAT) for day in dates]
 
 def select_free_seats(engine, date):
     logger.debug("свободные места для даты {}".format(date))
