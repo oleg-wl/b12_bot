@@ -109,10 +109,26 @@ class Start:
 
         #await context.bot.send_message(chat_id=uid, text='days', reply_markup=kb_days)
         await query.edit_message_text(text='days', reply_markup=kb_days)
+        
+        try:
+            button_data = update.callback_query.data.lower()
+            context.user_data["day"] = days[int(button_data)]
+        except ValueError:
+            pass
+        except KeyError:
+            pass
+        logger.debug(context.user_data['day'])
 
         return self.DATES
 
-    async def seats(self):
+    async def seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+        query = update.callback_query
+        await query.answer()
+
+        button_data = update.callback_query.data.lower()
+        logger.debug(button_data)
+
         return ConversationHandler.END
 
 
@@ -125,11 +141,13 @@ class Start:
                     MessageHandler(callback=self.auth, filters=(~filters.COMMAND)),
                 ],
                 self.PASS: [
-                    CallbackQueryHandler(self.seats, pattern="seats"),
+                    #CallbackQueryHandler(self.seats, pattern="seats"),
                     CallbackQueryHandler(self.dates, pattern="dates"),
                 ],
+                self.DATES: [
+                    CallbackQueryHandler(callback=self.seats, )
+                ],
                 self.SEATS: [],
-                self.DATES: [],
             },
             fallbacks=entry,
         )
