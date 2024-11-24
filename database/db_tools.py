@@ -1,7 +1,8 @@
 from sqlalchemy import create_engine
+import sqlalchemy
 from sqlalchemy.orm import Session
 
-from .schema import Base, SecureTable
+from .schema import Base, SecureTable, Users, Mastertable
 from .masterdata import MasterTable
 
 import os
@@ -29,6 +30,8 @@ class DBA_tools:
 
     @logger.catch
     def create_db(self):
+        Base.metadata.drop_all(self.engine)
+
         Base.metadata.create_all(self.engine)
 
     def insert_masterdata(self):

@@ -1,5 +1,9 @@
+import locale
+locale.setlocale(locale.LC_TIME, 'ru_RU.UTF-8')
+
 import datetime
 from datetime import timedelta
+from typing import Sequence
 from loguru import logger
 
 from sqlalchemy import select, update, insert, create_engine
@@ -8,7 +12,7 @@ from sqlalchemy.orm import Session
 from .schema import Users, Mastertable, SecureTable 
 from .masterdata import MasterTable as mt
 
-FORMAT = "%d-%m-%Y"
+FORMAT = "%d-%m-%Y %A"
 
 
 def select_days(engine):
@@ -31,7 +35,7 @@ def select_days(engine):
 
     return [day.strftime(FORMAT) for day in dates]
 
-def select_free_seats(engine, date):
+def select_free_seats(engine, date:datetime):
     logger.debug("свободные места для даты {}".format(date))
     # d = datetime.datetime.strptime(date, FORMAT)
 
@@ -41,10 +45,11 @@ def select_free_seats(engine, date):
             .order_by(Mastertable.seats)
             .filter(
                 Mastertable.period_day == date, 
-                Mastertable.user_id == None
+                Mastertable.user_id == None,
+                ~Mastertable.is_taken == True
             )
         )
-        seats = session.scalars(stmt).all()
+        seats: Sequence[int] = session.scalars(stmt).all()
     for s in seats:
         logger.debug(s)
     return seats

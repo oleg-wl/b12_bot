@@ -52,6 +52,7 @@ class MasterTable:
             self.master_table = pd.concat(
                 [self._make_calendar_list(year=y) for y in range(start_y, end_y + 1)]
             ).join(pd.DataFrame(self.seats, columns=["seats"]), how="cross")
+            self.master_table['is_taken'] = False
 
     @staticmethod
     def make_password(passwd):

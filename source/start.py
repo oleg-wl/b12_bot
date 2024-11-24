@@ -112,23 +112,35 @@ class Start:
         return self.DATES
 
     async def seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        uid: int = update.effective_chat.id
 
         query = update.callback_query
         await query.answer()
 
-        selected_date = datetime.datetime.strptime(
-            self.days[int(update.callback_query.data.lower())], "%d-%m-%Y"
+        self.selected_date = datetime.datetime.strptime(
+            self.days[int(update.callback_query.data.lower())], database.FORMAT
         ).date()
-        free_seats = database.select_free_seats(engine=database.engine, date=selected_date)
+        self.free_seats = database.select_free_seats(
+            engine=database.engine, date=self.selected_date
+        )
 
         # если свободных мест нет
-        if (len(free_seats) < 0) | (free_seats == None):
-            await query.edit_message_text(text='Свободных мест на эту дату нет', reply_markup=kb.bkb)
+        if (len(self.free_seats) < 0) | (self.free_seats == None):
+            await query.edit_message_text(
+                text="Свободных мест на эту дату нет", reply_markup=kb.bkb
+            )
+            return self.PASS
 
-        logger.debug('selected date {}'.format(selected_date))
-        logger.debug('free seats {}'.format(free_seats))
+        fs = kb.build_seats_keyboard(self.free_seats)
+        await context.bot.send_photo(chat_id=uid, caption='выбери место', photo='seats.jpg', reply_markup=fs)
 
-        return ConversationHandler.END
+        logger.debug("selected date {}".format(self.selected_date))
+        logger.debug("free seats {}".format(self.free_seats))
+
+        return self.SEATS
+    
+    def check_book_seat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        pass
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
@@ -143,11 +155,13 @@ class Start:
                     CallbackQueryHandler(self.dates, pattern="dates"),
                 ],
                 self.DATES: [
-                    CallbackQueryHandler(
-                        callback=self.seats
-                    )
+                    CallbackQueryHandler(callback=self.dates, pattern="back"),
+                    CallbackQueryHandler(callback=self.seats),
                 ],
-                self.SEATS: [],
+                self.SEATS: [
+                    CallbackQueryHandler(callback=self.seats, pattern="back"),
+                    CallbackQueryHandler(callback=self.check_book_seat),
+                ],
             },
             fallbacks=entry,
         )

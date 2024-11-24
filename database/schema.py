@@ -1,7 +1,8 @@
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String
-from sqlalchemy import Integer
+from sqlalchemy import ForeignKey
+from sqlalchemy import Integer, String, Boolean
+
 from sqlalchemy import Date, DateTime
 
 from sqlalchemy.orm import DeclarativeBase
@@ -42,7 +43,7 @@ class Mastertable(Base):
     user_id: Mapped[int] = mapped_column(
         "user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
-    # is_free: Mapped[bool] = mapped_column('is_free', Boolean(), default=True)
+    is_taken: Mapped[bool] = mapped_column('is_taken', Boolean(), default=False)
 
 
 class SecureTable(Base):
