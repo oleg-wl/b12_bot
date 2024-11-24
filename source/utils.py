@@ -30,7 +30,23 @@ class Keyboard:
         day_buttons = [InlineKeyboardButton(day, callback_data=str(i)) for i, day in enumerate(days)]
 
         return InlineKeyboardMarkup(self._build_menu(day_buttons, 1))
+    
+    def build_seats_keyboard(self, seats: list) -> InlineKeyboardMarkup:
 
+        seats_buttons = [InlineKeyboardButton(seat, callback_data=str(i)) for i, seat in enumerate(seats)]
+
+        def columns(seats: list):
+            l = len(seats)
+            if l < 6:
+                    return 1
+            elif l < 12: 
+                return 2
+            elif l < 18:
+                return 3
+            else: return 4
+        cols = columns(seats)
+                
+        return InlineKeyboardMarkup(self._build_menu(seats_buttons, cols))
 
     def __call__(self) -> None:
         

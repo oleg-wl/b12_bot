@@ -83,7 +83,7 @@ class Start:
                         chat_id=uid, text="ok", reply_markup=kb.kb_PASS
                     )
                     return self.PASS
-                
+
                 # в начало конверсейшена если эксепшен
                 # TODO: добавить эксепшены SQLA на повторный ввод пароля если ошибки базы
                 except Exception as e:
@@ -95,29 +95,19 @@ class Start:
                     chat_id=uid, text="Incorrect password try again"
                 )
                 return self.AUTH
-    
+
     @logger.catch
     async def dates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
-        
-        days = database.select_days(engine=database.engine)
 
-        kb_days = kb.build_days_keyboard(days=days)
+        self.days = database.select_days(engine=database.engine)
+
+        kb_days = kb.build_days_keyboard(days=self.days)
 
         query = update.callback_query
-        await query.answer()
 
-        #await context.bot.send_message(chat_id=uid, text='days', reply_markup=kb_days)
-        await query.edit_message_text(text='days', reply_markup=kb_days)
-        
-        try:
-            button_data = update.callback_query.data.lower()
-            context.user_data["day"] = days[int(button_data)]
-        except ValueError:
-            pass
-        except KeyError:
-            pass
-        logger.debug(context.user_data['day'])
+        # await context.bot.send_message(chat_id=uid, text='days', reply_markup=kb_days)
+        await context.bot.send_message(chat_id=uid, text="days", reply_markup=kb_days)
 
         return self.DATES
 
@@ -126,11 +116,19 @@ class Start:
         query = update.callback_query
         await query.answer()
 
-        button_data = update.callback_query.data.lower()
-        logger.debug(button_data)
+        selected_date = datetime.datetime.strptime(
+            self.days[int(update.callback_query.data.lower())], "%d-%m-%Y"
+        ).date()
+        free_seats = database.select_free_seats(engine=database.engine, date=selected_date)
+
+        # если свободных мест нет
+        if (len(free_seats) < 0) | (free_seats == None):
+            await query.edit_message_text(text='Свободных мест на эту дату нет', reply_markup=kb.bkb)
+
+        logger.debug('selected date {}'.format(selected_date))
+        logger.debug('free seats {}'.format(free_seats))
 
         return ConversationHandler.END
-
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
@@ -141,11 +139,13 @@ class Start:
                     MessageHandler(callback=self.auth, filters=(~filters.COMMAND)),
                 ],
                 self.PASS: [
-                    #CallbackQueryHandler(self.seats, pattern="seats"),
+                    # CallbackQueryHandler(self.seats, pattern="seats"),
                     CallbackQueryHandler(self.dates, pattern="dates"),
                 ],
                 self.DATES: [
-                    CallbackQueryHandler(callback=self.seats, )
+                    CallbackQueryHandler(
+                        callback=self.seats
+                    )
                 ],
                 self.SEATS: [],
             },
