@@ -1,3 +1,4 @@
+from venv import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
@@ -10,10 +11,11 @@ class Keyboard:
         self, buttons: list, n_cols: int, header_buttons=None, footer_buttons=None
     ):
         menu = [buttons[i : i + n_cols] for i in range(0, len(buttons), n_cols)]
+        logger.debug(menu)
         if header_buttons:
             menu.insert(0, [header_buttons])
         if footer_buttons:
-            menu.append([footer_buttons])
+            menu.append(footer_buttons)
         return menu
 
     def _PASS(self) -> InlineKeyboardMarkup:
@@ -29,7 +31,7 @@ class Keyboard:
 
         day_buttons = [InlineKeyboardButton(day, callback_data=str(i)) for i, day in enumerate(days)]
 
-        return InlineKeyboardMarkup(self._build_menu(day_buttons, 1))
+        return InlineKeyboardMarkup(self._build_menu(day_buttons, 1, footer_buttons=self.back_button))
     
     def build_seats_keyboard(self, seats: list) -> InlineKeyboardMarkup:
 
@@ -46,7 +48,7 @@ class Keyboard:
             else: return 4
         cols = columns(seats)
                 
-        return InlineKeyboardMarkup(self._build_menu(seats_buttons, cols))
+        return InlineKeyboardMarkup(self._build_menu(seats_buttons, cols, footer_buttons=self.back_button))
 
     def __call__(self) -> None:
         

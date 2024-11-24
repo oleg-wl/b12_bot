@@ -1,5 +1,7 @@
 import datetime
-from telegram import Update
+import re
+
+from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from loguru import logger
 
 from telegram.ext import (
@@ -22,7 +24,7 @@ kb()
 
 class Start:
 
-    AUTH, PASS, DATES, SEATS = range(4)
+    AUTH, PASS, DATES, SEATS, BOOK = range(5)
 
     def __repr__(self):
         return "Экземпляр класса Start"
@@ -104,9 +106,6 @@ class Start:
 
         kb_days = kb.build_days_keyboard(days=self.days)
 
-        query = update.callback_query
-
-        # await context.bot.send_message(chat_id=uid, text='days', reply_markup=kb_days)
         await context.bot.send_message(chat_id=uid, text="days", reply_markup=kb_days)
 
         return self.DATES
@@ -117,10 +116,12 @@ class Start:
         query = update.callback_query
         await query.answer()
 
-        self.selected_date = datetime.datetime.strptime(
-            self.days[int(update.callback_query.data.lower())], database.FORMAT
-        ).date()
-        self.free_seats = database.select_free_seats(
+        d = update.callback_query.data
+        if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
+            self.selected_date = datetime.datetime.strptime(
+                self.days[int(update.callback_query.data.lower())], database.FORMAT
+            ).date()
+        self.free_seats: filters.Sequence[str] = database.select_free_seats(
             engine=database.engine, date=self.selected_date
         )
 
@@ -132,14 +133,39 @@ class Start:
             return self.PASS
 
         fs = kb.build_seats_keyboard(self.free_seats)
-        await context.bot.send_photo(chat_id=uid, caption='выбери место', photo='seats.jpg', reply_markup=fs)
+        await context.bot.send_photo(
+            chat_id=uid, caption="выбери место", photo="seats.jpg", reply_markup=fs
+        )
 
         logger.debug("selected date {}".format(self.selected_date))
         logger.debug("free seats {}".format(self.free_seats))
 
         return self.SEATS
-    
-    def check_book_seat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+    @logger.catch()
+    async def check_book_seat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        uid: int = update.effective_chat.id
+        query = update.callback_query
+        await query.answer()
+
+        self.selected_seat: str = self.free_seats[
+            int(update.callback_query.data.lower())
+        ]
+        logger.debug("Selected seat {}".format(self.selected_seat))
+
+        await query.edit_message_caption(
+            caption=f"Занять {self.selected_seat} на {self.selected_date}?",
+            reply_markup=
+                InlineKeyboardMarkup(
+                    [
+                        kb.back_button,
+                        [InlineKeyboardButton(text="Да >>>", callback_data="book")],
+                    ]
+                )
+        )
+        return self.BOOK
+
+    async def book(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         pass
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
@@ -155,12 +181,16 @@ class Start:
                     CallbackQueryHandler(self.dates, pattern="dates"),
                 ],
                 self.DATES: [
-                    CallbackQueryHandler(callback=self.dates, pattern="back"),
+                    CallbackQueryHandler(callback=self.start, pattern="back"),
                     CallbackQueryHandler(callback=self.seats),
                 ],
                 self.SEATS: [
-                    CallbackQueryHandler(callback=self.seats, pattern="back"),
+                    CallbackQueryHandler(callback=self.dates, pattern="back"),
                     CallbackQueryHandler(callback=self.check_book_seat),
+                ],
+                self.BOOK: [
+                    CallbackQueryHandler(callback=self.seats, pattern="back"),
+                    CallbackQueryHandler(callback=self.book, pattern="book"),
                 ],
             },
             fallbacks=entry,
