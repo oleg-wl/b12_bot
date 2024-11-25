@@ -59,8 +59,17 @@ def select_my_seats():
     pass
 
 
-def book_seat():
-    pass
+def book_seat(engine, chat_id, selected_seat, selected_date):
+
+    with Session(engine) as session:
+        user_id_stmt = select(Users.id).where(Users.chat_id == chat_id)
+        user_id = session.scalars(user_id_stmt).first()
+        logger.debug(f'user_id - {user_id}, selected_date {selected_date}, selected_seat {selected_seat}')
+
+        upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id, is_taken=1)
+        session.execute(upd_stmt)
+        
+        session.commit()
 
 
 def unbook_seat():
