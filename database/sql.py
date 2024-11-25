@@ -66,9 +66,20 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
         user_id = session.scalars(user_id_stmt).first()
         logger.debug(f'user_id - {user_id}, selected_date {selected_date}, selected_seat {selected_seat}')
 
-        upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id, is_taken=1)
-        session.execute(upd_stmt)
+        # проверка что место не занято при одновременном букировании, пока сообщение с предложением занять место висит открытым у более чем одного человека
+        check_stmt = select(Mastertable.user_id).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat)
+
+        check = session.scalars(check_stmt).first()
+
+        if check is not None:
+            return False
         
+        else:
+
+            upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id, is_taken=1)
+            session.execute(upd_stmt)
+            
+
         session.commit()
 
 

@@ -168,15 +168,24 @@ class Start:
     async def book(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
 
-        database.book_seat(engine=database.engine, chat_id=uid, selected_date=self.selected_date, selected_seat=self.selected_seat)
-        logger.debug(f'seat booked {self.selected_seat} on {self.selected_date}')
+        c = database.book_seat(engine=database.engine, chat_id=uid, selected_date=self.selected_date, selected_seat=self.selected_seat)
 
         query = update.callback_query
         await query.answer()
+        
+        match c:
+            case False:
+                logger.debug(f'truing parralel update {c}')
+                fs = kb.build_seats_keyboard(self.free_seats)
+                await query.edit_message_caption(caption='Выбранное место уже занято', reply_markup=fs)
+                return self.SEATS
+            
+            case _:
+                logger.debug(f'seat booked {self.selected_seat} on {self.selected_date}')
 
-        await query.edit_message_caption(caption=f'место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}', reply_markup=kb.kb_PASS)
+                await query.edit_message_caption(caption=f'место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}', reply_markup=kb.kb_PASS)
 
-        return self.PASS
+                return self.PASS
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
