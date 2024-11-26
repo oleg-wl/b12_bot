@@ -65,17 +65,19 @@ def select_my_seats_d(engine, chat_id):
         userid_subquery = select(Users.id).where(Users.chat_id == chat_id).subquery()
 
         stmt = (
-            select(Mastertable.period_day)
+            select(Mastertable.period_day, Mastertable.seats)
             .order_by(Mastertable.id, Mastertable.period_day)
             .filter(
                 Mastertable.period_day.between(today, five_days),
                 Mastertable.is_weekend == 0,
-                Mastertable.id == select(userid_subquery)
+                Mastertable.user_id == select(userid_subquery)
             )
             .distinct()
         )
-        dates = session.scalars(stmt).all()
+        dates = session.execute(stmt).all()
+
         logger.debug(dates)
+    return dates
 
 
 def book_seat(engine, chat_id, selected_seat, selected_date):
@@ -107,9 +109,14 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
         session.commit()
 
 
-def unbook_seat():
-    pass
+def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):
 
+    logger.debug('{} - {}'.format(selected_unbook_date, selected_unbook_seat))
+    with Session(engine) as session:
+        unbook_stmt = update(Mastertable).where(Mastertable.period_day == selected_unbook_date).where(Mastertable.seats == selected_unbook_seat).values(is_taken=0, user_id=None)
+        session.execute(unbook_stmt)
+        
+        session.commit()
 
 def check_user(engine, chat_id):
 

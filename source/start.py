@@ -24,7 +24,7 @@ kb()
 
 class Start:
 
-    AUTH, PASS, DATES, SEATS, BOOK = range(5)
+    AUTH, PASS, DATES, SEATS, BOOK, MYSEATS, UNBOOK = range(7)
 
     def __repr__(self):
         return "Экземпляр класса Start"
@@ -155,37 +155,111 @@ class Start:
 
         await query.edit_message_caption(
             caption=f"Занять {self.selected_seat} на {self.selected_date}?",
-            reply_markup=
-                InlineKeyboardMarkup(
-                    [
-                        kb.back_button,
-                        [InlineKeyboardButton(text="Да >>>", callback_data="book")],
-                    ]
-                )
+            reply_markup=InlineKeyboardMarkup(
+                [
+                    kb.back_button,
+                    [InlineKeyboardButton(text="Да >>>", callback_data="book")],
+                ]
+            ),
         )
         return self.BOOK
 
     async def book(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
 
-        c = database.book_seat(engine=database.engine, chat_id=uid, selected_date=self.selected_date, selected_seat=self.selected_seat)
+        c = database.book_seat(
+            engine=database.engine,
+            chat_id=uid,
+            selected_date=self.selected_date,
+            selected_seat=self.selected_seat,
+        )
 
         query = update.callback_query
         await query.answer()
-        
+
         match c:
             case False:
-                logger.debug(f'truing parralel update {c}')
+                logger.debug(f"truing parralel update {c}")
                 fs = kb.build_seats_keyboard(self.free_seats)
-                await query.edit_message_caption(caption='Выбранное место уже занято', reply_markup=fs)
+                await query.edit_message_caption(
+                    caption="В день доступно только одно место или выбранное место уже занято",
+                    reply_markup=fs,
+                )
                 return self.SEATS
-            
-            case _:
-                logger.debug(f'seat booked {self.selected_seat} on {self.selected_date}')
 
-                await query.edit_message_caption(caption=f'место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}', reply_markup=kb.kb_PASS)
+            case _:
+                logger.debug(
+                    f"seat booked {self.selected_seat} on {self.selected_date}"
+                )
+
+                await query.edit_message_caption(
+                    caption=f"место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}",
+                    reply_markup=kb.kb_PASS,
+                )
 
                 return self.PASS
+
+    async def check_my_seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+        uid = update.effective_chat.id
+
+        self.booked_seats = database.select_my_seats_d(
+            engine=database.engine, chat_id=uid
+        )
+
+        buttons = []
+        for r in self.booked_seats:
+            date: datetime = r[0].strftime(database.FORMAT)
+            seat: str = r[1]
+            buttons.append("{} место {}".format(date, seat))
+
+        query = update.callback_query
+        await query.answer()
+        await query.edit_message_text(
+            "Твои места на ближайшие дни. Выбери, с какого снять бронь",
+            reply_markup=kb.build_booked_seats_keyboard(buttons),
+        )
+
+        return self.MYSEATS
+
+    async def check_unbook_seat(
+        self, update: Update, context: ContextTypes.DEFAULT_TYPE
+    ):
+
+        query = update.callback_query
+        await query.answer()
+
+        i = int(query.data)
+        logger.debug(i)
+
+        self.selected_unbook_date = self.booked_seats[i][0]
+        self.selected_unbook_seat = self.booked_seats[i][1]
+        logger.debug(
+            "seat to unbook date {} seat {}".format(
+                self.selected_unbook_date, self.selected_unbook_seat
+            )
+        )
+
+        await query.edit_message_text(
+            text="Освободить место {} на {}".format(
+                self.selected_unbook_seat,
+                self.selected_unbook_date.strftime(database.FORMAT),
+            ),
+            reply_markup=InlineKeyboardMarkup(
+                [[InlineKeyboardButton(text="Да >>>", callback_data="unbook")], kb.back_button]
+            ),
+        )
+        return self.UNBOOK
+
+    async def unbook(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        
+        database.unbook_seat(engine=database.engine, selected_unbook_date=self.selected_unbook_date, selected_unbook_seat=self.selected_unbook_seat)
+
+        query =  update.callback_query
+        await query.answer()
+
+        await query.edit_message_text('Место освобождено', reply_markup=kb.kb_PASS)
+        return self.PASS     
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
@@ -196,7 +270,7 @@ class Start:
                     MessageHandler(callback=self.auth, filters=(~filters.COMMAND)),
                 ],
                 self.PASS: [
-                    # CallbackQueryHandler(self.seats, pattern="seats"),
+                    CallbackQueryHandler(self.check_my_seats, pattern="myseats"),
                     CallbackQueryHandler(self.dates, pattern="dates"),
                 ],
                 self.DATES: [
@@ -210,6 +284,14 @@ class Start:
                 self.BOOK: [
                     CallbackQueryHandler(callback=self.seats, pattern="back"),
                     CallbackQueryHandler(callback=self.book, pattern="book"),
+                ],
+                self.MYSEATS: [
+                    CallbackQueryHandler(callback=self.start, pattern="back"),
+                    CallbackQueryHandler(callback=self.check_unbook_seat),
+                ],
+                self.UNBOOK: [
+                    CallbackQueryHandler(callback=self.start, pattern="back"),
+                    CallbackQueryHandler(callback=self.unbook, pattern="unbook"),
                 ],
             },
             fallbacks=entry,

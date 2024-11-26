@@ -22,7 +22,7 @@ class Keyboard:
 
         days_button = [
             InlineKeyboardButton("Выбрать дату", callback_data="dates"),
-            InlineKeyboardButton("Посмотреть свои места", callback_data="seats"),
+            InlineKeyboardButton("Посмотреть свои места", callback_data="myseats"),
         ]
 
         return InlineKeyboardMarkup(self._build_menu(days_button, 1))
@@ -49,6 +49,14 @@ class Keyboard:
         cols = columns(seats)
                 
         return InlineKeyboardMarkup(self._build_menu(seats_buttons, cols, footer_buttons=self.back_button))
+    
+    def build_booked_seats_keyboard(self, booked_seats: list):
+
+        booked_seats_buttons = [
+            InlineKeyboardButton(booked_seat, callback_data=str(i)) for i, booked_seat in enumerate(booked_seats)
+        ]
+        return InlineKeyboardMarkup(self._build_menu(booked_seats_buttons, 1, footer_buttons=self.back_button))
+
 
     def __call__(self) -> None:
         
