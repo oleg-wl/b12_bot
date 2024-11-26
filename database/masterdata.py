@@ -37,6 +37,8 @@ class MasterTable:
             pd.DataFrame(weekend_days, columns=["is_weekend"]), how="left"
         )
         df.period_day = df.period_day.dt.date
+        df['week_day'] = df['period_day'].dt.day
+
         return df
 
     def make_table(self, start_y: int, end_y: int):
