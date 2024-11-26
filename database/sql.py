@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 from .schema import Users, Mastertable, SecureTable 
 from .masterdata import MasterTable as mt
 
+
 FORMAT = "%d-%m-%Y %A"
 
 
@@ -55,8 +56,26 @@ def select_free_seats(engine, date:datetime):
     return seats
 
 
-def select_my_seats():
-    pass
+def select_my_seats_d(engine, chat_id):
+    today = datetime.date.today()
+    five_days = today + timedelta(days=5)
+
+    with Session(engine) as session:
+
+        userid_subquery = select(Users.id).where(Users.chat_id == chat_id).subquery()
+
+        stmt = (
+            select(Mastertable.period_day)
+            .order_by(Mastertable.id, Mastertable.period_day)
+            .filter(
+                Mastertable.period_day.between(today, five_days),
+                Mastertable.is_weekend == 0,
+                Mastertable.id == select(userid_subquery)
+            )
+            .distinct()
+        )
+        dates = session.scalars(stmt).all()
+        logger.debug(dates)
 
 
 def book_seat(engine, chat_id, selected_seat, selected_date):
@@ -71,7 +90,12 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
 
         check = session.scalars(check_stmt).first()
 
-        if check is not None:
+        # проверка-ограничение 1 место на 1 день
+        check_one_seat_per_day_stmt = select(Mastertable.user_id).where(Mastertable.period_day == selected_date).where(Mastertable.user_id == user_id)
+
+        check2 = session.scalars(check_one_seat_per_day_stmt).first()
+
+        if (check is not None) | (check2 is not None):
             return False
         
         else:
@@ -134,9 +158,11 @@ if __name__ == "__main__":
     eng = create_engine("sqlite:///b12.db")
     days = select_days(engine=eng)
     seats = select_free_seats(engine=eng, date=days[0])
+    my_seats_dates = select_my_seats_d(engine=eng)
 
     print(days)
     print(seats)
+    print(my_seats_dates)
 
     # _check_password(engine=eng, password=2024)
     # _check_password(engine=eng, password=2025)

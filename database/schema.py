@@ -38,8 +38,6 @@ class Mastertable(Base):
     seats: Mapped[int] = mapped_column("seats", String(6))
     period_day: Mapped[datetime.date] = mapped_column("period_day", Date())
     is_weekend: Mapped[int] = mapped_column("is_weekend", Integer())
-    # chat_id: Mapped[int] = mapped_column('chat_id', Integer())
-    # user: Mapped[str] = mapped_column('user', String())
     user_id: Mapped[int] = mapped_column(
         "user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )

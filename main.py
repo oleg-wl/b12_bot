@@ -4,6 +4,7 @@
 import os
 from dotenv import load_dotenv
 import loguru
+import click
 
 import source
 
@@ -14,10 +15,12 @@ from telegram.ext import (
     CommandHandler,
 )
 
-load_dotenv('config.env')
-TOKEN = os.getenv('BOT_API')
 
-def main(token: str):
+def main():
+
+    load_dotenv('config.env')
+    token = os.getenv('BOT_API')
+
     s = source.Start()
       
     app = ApplicationBuilder().token(token).build()
@@ -30,4 +33,4 @@ def main(token: str):
     app.run_polling()
 
 if __name__ == '__main__':
-    main(token=TOKEN)
+    main()
