@@ -192,8 +192,8 @@ class Start:
                     f"seat booked {self.selected_seat} on {self.selected_date}"
                 )
 
-                await query.edit_message_caption(
-                    caption=f"место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}",
+                await context.bot.send_message(chat_id=uid,
+                    text=f"место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}",
                     reply_markup=kb.kb_PASS,
                 )
 

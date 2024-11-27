@@ -47,7 +47,6 @@ def select_free_seats(engine, date:datetime):
             .filter(
                 Mastertable.period_day == date, 
                 Mastertable.user_id == None,
-                ~Mastertable.is_taken == True
             )
         )
         seats: Sequence[int] = session.scalars(stmt).all()
@@ -62,7 +61,7 @@ def select_my_seats_d(engine, chat_id):
 
     with Session(engine) as session:
 
-        userid_subquery = select(Users.id).where(Users.chat_id == chat_id).subquery()
+        userid_subquery = select(Users.id).where(Users.chat_id == chat_id).scalar_subquery()
 
         stmt = (
             select(Mastertable.period_day, Mastertable.seats)
@@ -102,7 +101,7 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
         
         else:
 
-            upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id, is_taken=1)
+            upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id)
             session.execute(upd_stmt)
             
 
@@ -113,7 +112,7 @@ def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):
 
     logger.debug('{} - {}'.format(selected_unbook_date, selected_unbook_seat))
     with Session(engine) as session:
-        unbook_stmt = update(Mastertable).where(Mastertable.period_day == selected_unbook_date).where(Mastertable.seats == selected_unbook_seat).values(is_taken=0, user_id=None)
+        unbook_stmt = update(Mastertable).where(Mastertable.period_day == selected_unbook_date).where(Mastertable.seats == selected_unbook_seat).values(user_id=None)
         session.execute(unbook_stmt)
         
         session.commit()

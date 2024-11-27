@@ -42,7 +42,7 @@ class Mastertable(Base):
     user_id: Mapped[int] = mapped_column(
         "user_id", ForeignKey("users.id", ondelete="CASCADE"), nullable=True
     )
-    is_taken: Mapped[bool] = mapped_column('is_taken', Boolean(), default=False)
+    #is_taken: Mapped[bool] = mapped_column('is_taken', Boolean(), default=False)
 
 
 class SecureTable(Base):
