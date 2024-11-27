@@ -26,6 +26,8 @@ class Start:
 
     AUTH, PASS, DATES, SEATS, BOOK, MYSEATS, UNBOOK = range(7)
 
+    context_logger = logger.bind()
+
     def __repr__(self):
         return "Экземпляр класса Start"
 
@@ -193,7 +195,7 @@ class Start:
                 )
 
                 await context.bot.send_message(chat_id=uid,
-                    text=f"место {self.selected_date.strftime(database.FORMAT)} забронировано на {self.selected_seat}",
+                    text=f"{self.selected_date.strftime(database.FORMAT)} забронировано место - {self.selected_seat}",
                     reply_markup=kb.kb_PASS,
                 )
 

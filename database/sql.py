@@ -92,20 +92,23 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
         check = session.scalars(check_stmt).first()
 
         # проверка-ограничение 1 место на 1 день
-        check_one_seat_per_day_stmt = select(Mastertable.user_id).where(Mastertable.period_day == selected_date).where(Mastertable.user_id == user_id)
+        check_one_seat_per_day_stmt = select(Mastertable.seats).where(Mastertable.period_day == selected_date).where(Mastertable.user_id == user_id)
 
-        check2 = session.scalars(check_one_seat_per_day_stmt).first()
+        prev_seat = session.scalars(check_one_seat_per_day_stmt).first()
 
-        if (check is not None) | (check2 is not None):
+        if (check is not None):
             return False
-        
+                
         else:
+            
+            del_prev_seat_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == prev_seat).values(user_id=None)
+            session.execute(del_prev_seat_stmt)
 
             upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id)
             session.execute(upd_stmt)
             
-
-        session.commit()
+            session.commit()
+            return prev_seat
 
 
 def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):

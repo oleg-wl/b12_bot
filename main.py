@@ -13,11 +13,10 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
 )
-FMT = '{}'
 
 logger.remove()  # Remove the current handler
-logger.add(stdout, level='WARNING', format='{time} - {message}')
-logger.add("bot.log", level="INFO", rotation='5MB', format='{level}:{line}:{name}:{function} - {time} - {message}')
+logger.add(stdout, level='DEBUG', format='{time}:{message}', backtrace=True, diagnose=True)
+logger.add("bot.log", level="DEBUG", rotation='5MB', format='{level}:{line}:{name}:{function}:{time}:{message}')
 
 
 def main():
