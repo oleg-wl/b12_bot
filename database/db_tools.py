@@ -24,7 +24,8 @@ class DBA_tools:
         dbport = os.getenv("db_port")
         dbname = os.getenv("db_name", "database")
 
-        self.engine = create_engine("sqlite:///{d}.db".format(d=dbname), echo=True)
+        self.engine = create_engine("sqlite:///{d}.db".format(d=dbname))
+        #self.engine = create_engine("sqlite:///{d}.db".format(d=dbname), echo=True)
 
         self.mt = MasterTable()
 

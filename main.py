@@ -2,18 +2,22 @@
 # -*- coding: UTF-8 -*-
 
 import os
+from sys import stdout
 from dotenv import load_dotenv
-import loguru
-import click
+from loguru import logger
 
 import source
 
 from telegram import Update
 from telegram.ext import (
     ApplicationBuilder,
-    ContextTypes,
     CommandHandler,
 )
+FMT = '{}'
+
+logger.remove()  # Remove the current handler
+logger.add(stdout, level='WARNING', format='{time} - {message}')
+logger.add("bot.log", level="INFO", rotation='5MB', format='{level}:{line}:{name}:{function} - {time} - {message}')
 
 
 def main():

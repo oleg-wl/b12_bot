@@ -106,7 +106,7 @@ class Start:
 
         kb_days = kb.build_days_keyboard(days=self.days)
 
-        await context.bot.send_message(chat_id=uid, text="days", reply_markup=kb_days)
+        await context.bot.send_message(chat_id=uid, text="Выбери день", reply_markup=kb_days)
 
         return self.DATES
 
@@ -206,15 +206,20 @@ class Start:
         self.booked_seats = database.select_my_seats_d(
             engine=database.engine, chat_id=uid
         )
+        query = update.callback_query
+        await query.answer()
 
+        # проверка если нет занятых мест возвращаем в меню
+        if len(self.booked_seats) == 0:
+            await query.edit_message_text('У тебя нет занятых мест на ближайшее время', reply_markup=kb.kb_PASS)
+            return self.PASS
+        
         buttons = []
         for r in self.booked_seats:
             date: datetime = r[0].strftime(database.FORMAT)
             seat: str = r[1]
             buttons.append("{} место {}".format(date, seat))
 
-        query = update.callback_query
-        await query.answer()
         await query.edit_message_text(
             "Твои места на ближайшие дни. Выбери, с какого снять бронь",
             reply_markup=kb.build_booked_seats_keyboard(buttons),

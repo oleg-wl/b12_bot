@@ -165,7 +165,9 @@ if __name__ == "__main__":
     eng = create_engine("sqlite:///b12.db")
     days = select_days(engine=eng)
     seats = select_free_seats(engine=eng, date=days[0])
-    my_seats_dates = select_my_seats_d(engine=eng)
+    my_seats_dates = select_my_seats_d(engine=eng, chat_id=123)
+
+    
 
     print(days)
     print(seats)

@@ -1,4 +1,4 @@
-from venv import logger
+from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 
