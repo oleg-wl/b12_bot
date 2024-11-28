@@ -21,7 +21,7 @@ class Keyboard:
     def _PASS(self) -> InlineKeyboardMarkup:
 
         days_button = [
-            InlineKeyboardButton("Выбрать дату", callback_data="dates"),
+            InlineKeyboardButton("Забронировать", callback_data="dates"),
             InlineKeyboardButton("Посмотреть свои места", callback_data="myseats"),
         ]
 

@@ -136,7 +136,7 @@ class Start:
 
         fs = kb.build_seats_keyboard(self.free_seats)
         await context.bot.send_photo(
-            chat_id=uid, caption="выбери место", photo="seats.jpg", reply_markup=fs
+            chat_id=uid, caption="Выбери место", photo="seats.jpg", reply_markup=fs
         )
 
         logger.debug("selected date {}".format(self.selected_date))
@@ -180,22 +180,34 @@ class Start:
         await query.answer()
 
         match c:
-            case False:
+            case 0:
                 logger.debug(f"truing parralel update {c}")
                 fs = kb.build_seats_keyboard(self.free_seats)
                 await query.edit_message_caption(
-                    caption="В день доступно только одно место или выбранное место уже занято",
+                    caption="Выбранное место уже заняли пока ты выбирал",
                     reply_markup=fs,
                 )
                 return self.SEATS
 
-            case _:
+            case 1:
                 logger.debug(
                     f"seat booked {self.selected_seat} on {self.selected_date}"
                 )
 
                 await context.bot.send_message(chat_id=uid,
                     text=f"{self.selected_date.strftime(database.FORMAT)} забронировано место - {self.selected_seat}",
+                    reply_markup=kb.kb_PASS,
+                )
+
+                return self.PASS
+            
+            case _:
+                logger.debug(
+                    f"previous seat {c} seat to book {self.selected_seat} on {self.selected_date}"
+                )
+
+                await context.bot.send_message(chat_id=uid,
+                    text=f"{self.selected_date.strftime(database.FORMAT)} забронировано место - {self.selected_seat}. С места {c} снята бронь.",
                     reply_markup=kb.kb_PASS,
                 )
 

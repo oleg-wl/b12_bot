@@ -87,29 +87,40 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
         user_id = session.scalars(user_id_stmt).first()
         logger.debug(f'user_id - {user_id}, selected_date {selected_date}, selected_seat {selected_seat}')
 
-        # проверка что место не занято при одновременном букировании, пока сообщение с предложением занять место висит открытым у более чем одного человека
+        # проверка - 0 
+        # место не было занято при одновременном букировании, пока сообщение с предложением занять место висит открытым у более чем одного человека
         check_stmt = select(Mastertable.user_id).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat)
 
         check = session.scalars(check_stmt).first()
 
-        # проверка-ограничение 1 место на 1 день
+        # проверка - 1
+        # ограничение 1 место на 1 день - сообщить что предыдущее место забронировано
         check_one_seat_per_day_stmt = select(Mastertable.seats).where(Mastertable.period_day == selected_date).where(Mastertable.user_id == user_id)
 
         prev_seat = session.scalars(check_one_seat_per_day_stmt).first()
 
         if (check is not None):
-            return False
-                
-        else:
-            
+        
+            return 0
+        
+        elif (prev_seat is not None):
+
             del_prev_seat_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == prev_seat).values(user_id=None)
             session.execute(del_prev_seat_stmt)
 
             upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id)
             session.execute(upd_stmt)
+            session.commit()
+            
+            return prev_seat
+
+        else:
+
+            upd_stmt = update(Mastertable).where(Mastertable.period_day == selected_date).where(Mastertable.seats == selected_seat).values(user_id=user_id)
+            session.execute(upd_stmt)
             
             session.commit()
-            return prev_seat
+            return 1
 
 
 def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):
