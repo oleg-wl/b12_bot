@@ -44,9 +44,10 @@ def select_free_seats(engine, date:datetime):
         stmt = (
             select(Mastertable.seats)
             .order_by(Mastertable.seats)
-            .filter(
-                Mastertable.period_day == date, 
-                Mastertable.user_id == None,
+            .where(
+                Mastertable.period_day == date
+            ).where( 
+                Mastertable.user_id == None
             )
         )
         seats: Sequence[int] = session.scalars(stmt).all()
