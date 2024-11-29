@@ -16,20 +16,20 @@ from .masterdata import MasterTable as mt
 FORMAT = "%d-%m-%Y %A"
 
 
-def select_days(engine):
+def select_days(engine, d: int):
 
     today = datetime.date.today()
-    five_days = today + timedelta(days=5)
 
     with Session(engine) as session:
         stmt = (
             select(Mastertable.period_day)
             .order_by(Mastertable.id, Mastertable.period_day)
-            .filter(
-                Mastertable.period_day.between(today, five_days),
+            .where(
+                Mastertable.period_day >= today
+            ).where(
                 Mastertable.is_weekend == 0,
             )
-            .distinct()
+            .distinct().limit(d)
         )
         dates = session.scalars(stmt).all()
         logger.debug(dates)

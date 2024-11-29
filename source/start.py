@@ -104,7 +104,7 @@ class Start:
     async def dates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
 
-        self.days = database.select_days(engine=database.engine)
+        self.days = database.select_days(engine=database.engine, d=3)
 
         kb_days = kb.build_days_keyboard(days=self.days)
 
