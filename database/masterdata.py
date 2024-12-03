@@ -15,9 +15,10 @@ class MasterTable:
 
         # собрать лист с рабочими местами
         # NOTE: кириллица
-        self.seats = ["2В.{:0>3}".format(i) for i in range(1, 23)]
-        self.seats.append("2А.001")
-        self.seats.append("2А.002")
+        # FIXME: c 
+        self.seats = ["2B.{:0>3}".format(i) for i in range(1, 23)]
+        self.seats.append("2A.002")
+        self.seats.append("2A.003")
 
     def _make_weekends(self, year: int):
         r = requests.get(f"https://n01.isdayoff.ru/api/getdata?year={year}&cc=ru&pre=0")
