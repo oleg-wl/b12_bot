@@ -16,11 +16,11 @@ from telegram.ext import (
 
 logger.remove()  # Remove the current handler
 logger.add(
-    stdout, level="DEBUG", format="{time}:{message}", backtrace=True, diagnose=True
+    stdout, level="WARNING", format="{time}:{message}", backtrace=False, diagnose=False
 )
 logger.add(
     "bot.log",
-    level="DEBUG",
+    level="INFO",
     rotation="5MB",
     format="{level}:{line}:{name}:{function}:{time}:{message}",
 )

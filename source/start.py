@@ -36,7 +36,7 @@ class Start:
         uid = update.effective_chat.id
         uname = update.effective_chat.username
 
-        user = database.check_user(engine=database.engine, chat_id=uid)
+        user = database.check_user_chat_id(engine=database.engine, chat_id=uid)
 
         if user == None:
             await context.bot.send_message(
@@ -57,8 +57,9 @@ class Start:
     @logger.catch
     async def auth(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         uid: int = update.effective_chat.id
-        username = update.effective_chat.username
         fname = update.effective_chat.first_name
+        # заменить юзернейм именем если юзернейм None
+        username = update.effective_chat.username if update.effective_chat.username is not None else fname
         lname = update.effective_chat.last_name
         now = datetime.datetime.now()
 
@@ -282,7 +283,7 @@ class Start:
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
-        conversation = ConversationHandler(
+        conversation = ConversationHandler(per_message=False,
             entry_points=entry,
             states={
                 self.AUTH: [

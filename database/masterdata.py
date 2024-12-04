@@ -15,7 +15,7 @@ class MasterTable:
 
         # собрать лист с рабочими местами
         # NOTE: кириллица
-        # FIXME: c 
+        # FIXME: с версии 1.0.0 изменено с кирилицы на англ. при пересоздании базы измении скрипты создания базы
         self.seats = ["2B.{:0>3}".format(i) for i in range(1, 23)]
         self.seats.append("2A.002")
         self.seats.append("2A.003")
