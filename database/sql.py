@@ -1,12 +1,11 @@
 import locale
-
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 import datetime
-from typing import Sequence
+from typing import Sequence, Tuple
 from loguru import logger
 
-from sqlalchemy import select, update, create_engine
+from sqlalchemy import Row, Select, select, update, create_engine
 from sqlalchemy.orm import Session
 
 from .schema import Users, Mastertable, SecureTable
@@ -37,7 +36,7 @@ def select_days(engine, d: int):
     return [day.strftime(FORMAT) for day in dates]
 
 
-def select_free_seats(engine, date: datetime):
+def select_free_seats(engine, date: datetime) -> Sequence[int]:
     logger.debug("свободные места для даты {}".format(date))
     # d = datetime.datetime.strptime(date, FORMAT)
 
@@ -54,7 +53,7 @@ def select_free_seats(engine, date: datetime):
     return seats
 
 
-def select_my_seats_d(engine, chat_id):
+def select_my_seats_to_unbook(engine, chat_id) -> Sequence[Row[Tuple[datetime.datetime | int]]]:
     today = datetime.date.today()
 
     with Session(engine) as session:
@@ -63,7 +62,7 @@ def select_my_seats_d(engine, chat_id):
             select(Users.id).where(Users.chat_id == chat_id).scalar_subquery()
         )
 
-        stmt = (
+        stmt: Select[Tuple[datetime.datetime, int]] = (
             select(Mastertable.period_day, Mastertable.seats)
             .order_by(Mastertable.id, Mastertable.period_day)
             .where(Mastertable.is_weekend == 0)
@@ -72,13 +71,13 @@ def select_my_seats_d(engine, chat_id):
             .distinct()
             .limit(5)
         )
-        dates = session.execute(stmt).all()
+        dates: Sequence[Row[Tuple[datetime.datetime, int]]] = session.execute(stmt).all()
 
         logger.debug(dates)
     return dates
 
 
-def book_seat(engine, chat_id, selected_seat, selected_date):
+def book_seat(engine, chat_id, selected_seat, selected_date) -> int:
 
     with Session(engine) as session:
         user_id_stmt = select(Users.id).where(Users.chat_id == chat_id)
@@ -89,7 +88,7 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
 
         # проверка - 0
         # место не было занято при одновременном букировании, пока сообщение с предложением занять место висит открытым у более чем одного человека
-        check_stmt = (
+        check_stmt: Select[Tuple[int]] = (
             select(Mastertable.user_id)
             .where(Mastertable.period_day == selected_date)
             .where(Mastertable.seats == selected_seat)
@@ -99,13 +98,13 @@ def book_seat(engine, chat_id, selected_seat, selected_date):
 
         # проверка - 1
         # ограничение 1 место на 1 день - сообщить что предыдущее место забронировано
-        check_one_seat_per_day_stmt = (
+        check_one_seat_per_day_stmt: Select[Tuple[int]] = (
             select(Mastertable.seats)
             .where(Mastertable.period_day == selected_date)
             .where(Mastertable.user_id == user_id)
         )
 
-        prev_seat = session.scalars(check_one_seat_per_day_stmt).first()
+        prev_seat: int | None = session.scalars(check_one_seat_per_day_stmt).first()
 
         if check is not None:
 
@@ -161,7 +160,7 @@ def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):
         session.commit()
 
 
-def check_user_chat_id(engine, chat_id):
+def check_user_chat_id(engine, chat_id) -> Row[Tuple[Users]] | None:
 
     with Session(engine) as session:
         stmt = select(Users).filter_by(chat_id=chat_id)
@@ -197,7 +196,7 @@ def insert_user(engine, **kwargs):
     )
 
 
-def check_password(engine, password):
+def check_password(engine, password) -> bool:
     password = mt.make_password(passwd=password)
     logger.debug(password)
 
@@ -207,7 +206,7 @@ def check_password(engine, password):
 
         match access:
             case None:
-                logger.debug("acces denied")
+                logger.debug("access denied")
                 return False
 
             case _:
@@ -221,11 +220,12 @@ if __name__ == "__main__":
     eng = create_engine("sqlite:///b12.db")
     days = select_days(engine=eng)
     seats = select_free_seats(engine=eng, date=days[0])
-    my_seats_dates = select_my_seats_d(engine=eng, chat_id=123)
+    my_seats_dates = select_my_seats_to_unbook(engine=eng, chat_id=123)
 
     print(days)
     print(seats)
     print(my_seats_dates)
+    print(type(my_seats_dates[0]))
 
     # _check_password(engine=eng, password=2024)
     # _check_password(engine=eng, password=2025)
