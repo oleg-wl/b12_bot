@@ -21,8 +21,6 @@ class Start:
     AUTH = 1
 
     kb = KeyboardBuilder()
-    context_logger = logger.bind()
-    
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # По команде /start первичная авторизация. Если пароль верный, чатайди запишем в базу и повторная авториация будет не нужна 
@@ -115,10 +113,20 @@ class Start:
         )
         return conversation
     
-    async def help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        chat_id = update.effective_chat.id
+    async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        await context.bot.send_message(
-            chat_id=chat_id,
-            text='Бот для брони места в офисе - Невская ратуша, корп4 эт2\nМеста: 2В.001, 2В.007,2В.008, 2В.011, 2В.012, 2А.002, 2А.003 забронены по дефолту. Для брони /book: лимит три дня. если бронить разные места внутри дня, бронь перезаписывается - 1 день - 1 место\nТвои активные брони на ближайшие 5 дней: /myseats\nЕсли надо оптом снять бронь (отпуск или заболел) напиши @lordcrabov'
-        )
+        if update.message.chat.type in ['group', 'supergroup']:
+            message_id = update.message.message_id
+
+            kb = [[InlineKeyboardButton('Написать боту', url = 'tg://user?id={}'.format(context.bot.id))]]
+
+            await update.message.reply_text(
+                reply_to_message_id=message_id,
+                text = 'Привет {}. Для брони мест напиши мне в личные сообщения'.format(update.message.from_user.name),
+                reply_markup = InlineKeyboardMarkup(kb)
+
+            )
+        else:
+            await update.message.reply_text(
+                text='Бот для брони места в офисе - Невская ратуша, корп4 эт2\nМеста: 2В.001, 2В.007,2В.008, 2В.011, 2В.012, 2А.002, 2А.003 забронены по дефолту. Для брони /book: лимит три дня. если бронить разные места внутри дня, бронь перезаписывается - 1 день - 1 место\nТвои активные брони на ближайшие 5 дней: /myseats\nЕсли надо оптом снять бронь (отпуск или заболел) напиши @lordcrabov'
+            )

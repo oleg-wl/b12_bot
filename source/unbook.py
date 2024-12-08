@@ -28,8 +28,6 @@ class UnbookSeat(Start):
 
     MYSEATS, UNBOOK = range(6, 8)
 
-    context_logger = logger.bind()
-
     def __repr__(self):
         return "Экземпляр класса UnbookSeats"
 
@@ -79,6 +77,7 @@ class UnbookSeat(Start):
             buttons.append("{} место {}".format(date, seat))
             logger.debug("Types check: date {}, seat {}", date, seat)
 
+        logger.debug('=== update callback query {} ===', update.callback_query)
         if update.callback_query != None:
             query = update.callback_query
             query.answer()

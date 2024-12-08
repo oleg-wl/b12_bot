@@ -28,8 +28,6 @@ class BookSeat(Start):
     DATES, SEATS, BOOK = range(2, 5)
     logger.debug(f"{DATES}, {SEATS}, {BOOK}")
 
-    context_logger = logger.bind()
-
     def __repr__(self):
         return "Экземпляр класса BookSeat"
 

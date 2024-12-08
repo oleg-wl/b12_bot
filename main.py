@@ -9,9 +9,9 @@ from loguru import logger
 #for debugging purp
 import logging
 logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.DEBUG
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
 )
-logger.add(sink=stdout, level='DEBUG')
+#logger.add(sink=stdout, level='DEBUG')
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 
@@ -53,9 +53,10 @@ def main():
     unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
     
-    help_handler = CommandHandler('help', s.help)
+    help_handler = CommandHandler("help", s.help)
 
-    app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv, help_handler])
+    app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv])
+    app.add_handler(help_handler)
 
     app.run_polling(timeout=30)
 
