@@ -21,19 +21,18 @@ GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID')
 
 
 class BookSeat(Start):
+    DATES, SEATS, BOOK = range(2, 5)
 
     def __init__(self) -> None:
         super().__init__()
+        logger.debug(self.__repr__())
 
-    DATES, SEATS, BOOK = range(2, 5)
-    logger.debug(f"{DATES}, {SEATS}, {BOOK}")
 
     def __repr__(self):
-        return "Экземпляр класса BookSeat"
+        return "book class init"
 
     async def dates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
-        logger.debug(uid)
 
         if update.effective_chat.type in ['group', 'supergroup']:
             message_id = update.message.message_id
@@ -46,10 +45,12 @@ class BookSeat(Start):
                 reply_markup = InlineKeyboardMarkup(kb)
 
             )
+            logger.success('/book in group chat {}', message_id)
             return ConversationHandler.END
 
         self.days = database.select_days(engine=database.engine, d=3)
         kb_days = self.kb.build_days_keyboard(days=self.days)
+        
         logger.debug(self.days)
 
         if update.callback_query != None:

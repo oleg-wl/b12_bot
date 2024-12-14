@@ -5,7 +5,7 @@ import datetime
 from typing import Sequence, Tuple
 from loguru import logger
 
-from sqlalchemy import Row, Select, select, update, create_engine
+from sqlalchemy import Row, Select, select, update, create_engine, text
 from sqlalchemy.orm import Session
 
 from .schema import Users, Mastertable, SecureTable
@@ -13,6 +13,13 @@ from .masterdata import MasterTable as mt
 
 
 FORMAT = "%d-%m-%Y %A"
+
+logger.catch()
+def check_connection(engine):
+    stmt = select(text("'ok'"))
+    with Session(engine) as session:
+        r = session.execute(stmt)
+    logger.success('Connection {}', r.first()[0])
 
 
 def select_days(engine, d: int):
@@ -22,7 +29,7 @@ def select_days(engine, d: int):
     with Session(engine) as session:
         stmt = (
             select(Mastertable.period_day)
-            .order_by(Mastertable.id, Mastertable.period_day)
+            .order_by(Mastertable.period_day)
             .where(Mastertable.period_day >= today)
             .where(
                 Mastertable.is_weekend == 0,
@@ -64,7 +71,7 @@ def select_my_seats_to_unbook(engine, chat_id) -> Sequence[Row[Tuple[datetime.da
 
         stmt: Select[Tuple[datetime.datetime, int]] = (
             select(Mastertable.period_day, Mastertable.seats)
-            .order_by(Mastertable.id, Mastertable.period_day)
+            .order_by(Mastertable.period_day)
             .where(Mastertable.is_weekend == 0)
             .where(Mastertable.user_id == select(userid_subquery))
             .where(Mastertable.period_day >= today)
@@ -73,7 +80,7 @@ def select_my_seats_to_unbook(engine, chat_id) -> Sequence[Row[Tuple[datetime.da
         )
         dates: Sequence[Row[Tuple[datetime.datetime, int]]] = session.execute(stmt).all()
 
-        logger.debug(dates)
+        logger.debug('dates to unbook', dates)
     return dates
 
 

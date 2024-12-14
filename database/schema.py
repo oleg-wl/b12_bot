@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from sqlalchemy import ForeignKey
-from sqlalchemy import Integer, String, Boolean
+from sqlalchemy import Integer, String, BigInteger
 
 from sqlalchemy import Date, DateTime
 
@@ -20,7 +20,7 @@ class Users(Base):
     id: Mapped[str] = mapped_column(
         "id", Integer(), primary_key=True, autoincrement=True
     )
-    chat_id: Mapped[int] = mapped_column("chat_id", Integer())
+    chat_id: Mapped[int] = mapped_column("chat_id", BigInteger())
     username: Mapped[str] = mapped_column("username", String())
     firstname: Mapped[str] = mapped_column("firstname", String(), nullable=True)
     lastname: Mapped[str] = mapped_column("lastname", String(), nullable=True)

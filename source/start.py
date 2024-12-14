@@ -38,14 +38,14 @@ class Start:
                 reply_markup = InlineKeyboardMarkup(kb)
 
             )
-            logger.debug('/Start command in groupchat')
+            logger.success('/Start command in groupchat')
             return ConversationHandler.END
 
         # проверить, что юзер уже есть в БД по чатайди
         user = database.check_user_chat_id(engine=database.engine, chat_id=uid)
 
         if user:
-            logger.debug('/Start command in private chat - user: {}', user)
+            logger.success('/Start command in private chat - user: {}', user)
             await context.bot.send_message(
                 chat_id=uid,
                 text=f"Привет {uname}, рад снова видеть тебя.\n/book - для бронирования места\n/myseats - твои места\n/whois - посмотреть кто занял место (в разработке)",
@@ -54,7 +54,7 @@ class Start:
 
         # если юзера нет попросить пароль
         elif user == None:
-            logger.debug('/Start in private chat - try auth -  user: {}', user)
+            logger.success('/Start in private chat - try auth -  user: {}', user)
             await context.bot.send_message(
                 chat_id=uid,
                 text=f"Привет {uname}, для работы тебе надо авторизоваться. Введи пароль",
@@ -73,7 +73,7 @@ class Start:
         passwd = update.message.text
 
         access = database.check_password(engine=database.engine, password=passwd)
-        logger.debug('Trying access')
+        logger.info('Trying access')
         if access:
             try:
                 database.insert_user(
@@ -87,7 +87,7 @@ class Start:
                 await context.bot.send_message(
                     chat_id=uid, text="Аксес грандед"
                 )
-                logger.debug('Password correct. chat_id:{}, username:{}, firstname:{} inserted', uid, username, fname)
+                logger.success('Password correct. chat_id:{}, username:{}, firstname:{} inserted', uid, username, fname)
                 return ConversationHandler.END
 
             except Exception as e:
@@ -95,7 +95,7 @@ class Start:
                 await context.bot.send_message(chat_id=uid, text="some error")
                 return ConversationHandler.END
         else:
-            logger.debug('Password incorrect. pass: {}, chat_id:{}, username:{}, firstname:{} inserted', passwd, uid, username, fname)
+            logger.warning('Password incorrect. pass: {}, chat_id:{}, username:{}, firstname:{} inserted', passwd, uid, username, fname)
             await context.bot.send_message(chat_id=uid, text='Неверный пароль попробуй еще раз')
             return self.AUTH
 

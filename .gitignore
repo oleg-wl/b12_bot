@@ -1,4 +1,7 @@
 *.db
+*.csv
+*.sql
+*.log
 venv
 *test*
 *.env

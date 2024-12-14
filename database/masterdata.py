@@ -16,7 +16,7 @@ class MasterTable:
         # собрать лист с рабочими местами
         # NOTE: кириллица
         # FIXME: с версии 1.0.0 изменено с кирилицы на англ. при пересоздании базы измении скрипты создания базы
-        self.seats = ["2B.{:0>3}".format(i) for i in range(1, 23)]
+        self.seats = ["2B.{:0>3}".format(i) for i in range(1, 25)]
         self.seats.append("2A.002")
         self.seats.append("2A.003")
 
@@ -34,11 +34,12 @@ class MasterTable:
 
         period = pd.date_range(start=start_day, end=end_day, freq="D")
 
-        df = pd.DataFrame(period, columns=["period_day"]).join(
+        df = pd.DataFrame(period, columns=["date"]).join(
             pd.DataFrame(weekend_days, columns=["is_weekend"]), how="left"
         )
-        df.period_day = df.period_day.dt.date
-        df['week_day'] = df['period_day'].dt.day
+        df['period_day'] = df['date'].dt.date
+        df['week_day'] = df['date'].dt.day
+        df = df.drop('date', axis=1)
 
         return df
 
@@ -55,7 +56,6 @@ class MasterTable:
             self.master_table = pd.concat(
                 [self._make_calendar_list(year=y) for y in range(start_y, end_y + 1)]
             ).join(pd.DataFrame(self.seats, columns=["seats"]), how="cross")
-            self.master_table['is_taken'] = False
 
     @staticmethod
     def make_password(passwd):

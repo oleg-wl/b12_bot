@@ -94,6 +94,7 @@ class UnbookSeat(Start):
             reply_markup=self.kb.build_booked_seats_keyboard(buttons),
         )
         logger.debug("/Unbook for seats {}", self.booked_seats)
+        logger.debug("/Unbook in send message", self.booked_seats)
 
         return self.MYSEATS
 

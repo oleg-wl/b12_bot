@@ -1,8 +1,7 @@
 from sqlalchemy import create_engine
-import sqlalchemy
 from sqlalchemy.orm import Session
 
-from .schema import Base, SecureTable, Users, Mastertable
+from .schema import Base, SecureTable
 from .masterdata import MasterTable
 
 import os
@@ -18,14 +17,18 @@ class DBA_tools:
     def __init__(self):
 
         db_user = os.getenv("db_user")
-        dbpass = os.getenv("db_pass")
+        db_pass = os.getenv("db_password")
 
-        dbhost = os.getenv("db_host")
-        dbport = os.getenv("db_port")
-        dbname = os.getenv("db_name", "database")
+        db_host = os.getenv("db_host")
+        db_port = os.getenv("db_port")
+        db_name = os.getenv("db_name", "database")
+        dbengine = os.getenv('db_engine')
 
-        self.engine = create_engine("sqlite:///{d}.db".format(d=dbname))
-        #self.engine = create_engine("sqlite:///{d}.db".format(d=dbname), echo=True)
+        match dbengine:
+            case 'sqlite3':
+                self.engine = create_engine("sqlite:///{d}.db".format(d=db_name), echo=True)
+            case 'postgre':
+                self.engine = create_engine(f"postgresql+psycopg2://{db_user}:{db_pass}@{db_host}:{db_port}/{db_name}", connect_args={'sslmode':'require'})
 
         self.mt = MasterTable()
 

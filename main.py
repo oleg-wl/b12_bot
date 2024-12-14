@@ -2,18 +2,10 @@
 # -*- coding: UTF-8 -*-
 
 import os
+import sys
 from dotenv import load_dotenv
-from sys import stdout
-from loguru import logger
 
-#for debugging purp
-import logging
-logging.basicConfig(
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s", level=logging.INFO
-)
-#logger.add(sink=stdout, level='DEBUG')
-logging.getLogger("httpx").setLevel(logging.WARNING)
-logging.getLogger("httpcore").setLevel(logging.WARNING)
+from loguru import logger
 
 from source.start import Start
 from source.book import BookSeat
@@ -23,6 +15,7 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
 )
+
 
 
 @logger.catch()
@@ -52,7 +45,7 @@ def main():
 
     unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
-    
+
     help_handler = CommandHandler("help", s.help)
 
     app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv])
@@ -62,4 +55,18 @@ def main():
 
 
 if __name__ == "__main__":
+
+    fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | {message}"
+
+    logger.remove()
+    logger.add(sys.stdout, format=fmt, level="ERROR", colorize=True)
+    logger.add(
+        "b12bot.log",
+        format=fmt,
+        colorize=False,
+        level="DEBUG",
+        rotation="5MB",
+        backtrace=True,
+        diagnose=True,
+    )
     main()
