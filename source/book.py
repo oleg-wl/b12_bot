@@ -80,6 +80,8 @@ class BookSeat(Start):
         self.free_seats: filters.Sequence[str] = database.select_free_seats(
             engine=database.engine, date=self.selected_date
         )
+        logger.debug("selected date {}".format(self.selected_date))
+        logger.debug("free seats {}".format(self.free_seats))
 
         # если свободных мест нет
         if (len(self.free_seats) < 0) | (self.free_seats == None):
@@ -87,16 +89,16 @@ class BookSeat(Start):
                 caption="Свободных мест на эту дату нет", reply_markup=self.kb.bkb
             )
             return ConversationHandler.END
+        
+        else:
 
-        fs = self.kb.build_seats_keyboard(self.free_seats)
-        await query.edit_message_caption(
-            caption="Выбери место", reply_markup=fs
-        )
+            fs = self.kb.build_seats_keyboard(self.free_seats)
+            await query.edit_message_caption(
+                caption="Выбери место", reply_markup=fs
+            )
 
-        logger.debug("selected date {}".format(self.selected_date))
-        logger.debug("free seats {}".format(self.free_seats))
+            return self.SEATS
 
-        return self.SEATS
 
     async def check_book_seat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
