@@ -11,11 +11,12 @@ from source.start import Start
 from source.book import BookSeat
 from source.unbook import UnbookSeat
 
+from source.error_handler import error_handler
+
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
 )
-
 
 
 @logger.catch()
@@ -50,6 +51,7 @@ def main():
 
     app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv])
     app.add_handler(help_handler)
+    app.add_error_handler(error_handler)
 
     app.run_polling(timeout=30)
 
@@ -69,4 +71,5 @@ if __name__ == "__main__":
         backtrace=True,
         diagnose=True,
     )
+
     main()
