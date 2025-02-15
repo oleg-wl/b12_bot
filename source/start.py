@@ -22,6 +22,23 @@ class Start:
 
     kb = KeyboardBuilder()
 
+    async def _check_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+        if update.effective_chat.type in ['group', 'supergroup']:
+            message_id = update.message.message_id
+
+            kb = [[InlineKeyboardButton('Написать боту', url = 'tg://user?id={}'.format(context.bot.id))]]
+
+            await update.message.reply_text(
+                reply_to_message_id=message_id,
+                text = 'Привет {}. Для брони мест напиши мне в личные сообщения'.format(update.message.from_user.name),
+                reply_markup = InlineKeyboardMarkup(kb)
+
+            )
+            logger.success('in group chat {}', message_id)
+            return ConversationHandler.END
+
+
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # По команде /start первичная авторизация. Если пароль верный, чатайди запишем в базу и повторная авториация будет не нужна 
         uid = update.effective_chat.id

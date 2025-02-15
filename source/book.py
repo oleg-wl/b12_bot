@@ -53,9 +53,10 @@ class BookSeat(Start):
         
         logger.debug(self.days)
 
+        #проверка на callback_query сценарий: кнопка "Вернуться"
         if update.callback_query != None:
             query = update.callback_query
-            query.answer()
+            await query.answer()
 
             await query.edit_message_caption(
                 caption="Выбери день для брони", reply_markup=kb_days
@@ -67,7 +68,6 @@ class BookSeat(Start):
         return self.DATES
 
     async def seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        uid: int = update.effective_chat.id
 
         query = update.callback_query
         await query.answer()
@@ -84,11 +84,11 @@ class BookSeat(Start):
         logger.debug("free seats {}".format(self.free_seats))
 
         # если свободных мест нет
-        if (len(self.free_seats) < 0) | (self.free_seats == None):
+        if (len(self.free_seats) <= 0) | (self.free_seats == None):
             await query.edit_message_caption(
                 caption="Свободных мест на эту дату нет", reply_markup=self.kb.bkb
             )
-            return ConversationHandler.END
+            return self.SEATS
         
         else:
 

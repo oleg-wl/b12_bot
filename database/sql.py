@@ -1,4 +1,5 @@
 import locale
+
 locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 import datetime
@@ -221,6 +222,23 @@ def check_password(engine, password) -> bool:
                 return True
 
     logger.debug(access)
+
+def show_who_booked(engine, date: datetime) -> str:
+
+    with Session(engine) as session:
+        stmt = (select(Users.username, Mastertable.seats)
+                        .where(Mastertable.period_day == date)
+                        .where(Users.id == Mastertable.user_id)
+                        .where(Users.id != -1)
+                        .order_by(Mastertable.seats)
+        )
+        usernames: Sequence[Row[Tuple[str | int]]] = session.execute(stmt).fetchall()
+    
+    s = ''
+    for i in usernames:
+        s += '{} - @{}\n'.format(i[1], i[0])
+    
+    return s
 
 
 if __name__ == "__main__":

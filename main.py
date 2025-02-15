@@ -10,6 +10,7 @@ from loguru import logger
 from source.start import Start
 from source.book import BookSeat
 from source.unbook import UnbookSeat
+from source.whos import WhosSeat
 
 from source.error_handler import error_handler
 
@@ -28,13 +29,14 @@ def main():
     s = Start()
     b = BookSeat()
     ub = UnbookSeat()
+    ws = WhosSeat()
 
     # увеличены таймауты если что-то с сетью
     app = (
         ApplicationBuilder()
         .token(token)
-        .read_timeout(10)
-        .get_updates_read_timeout(10)
+#        .read_timeout(10)
+#        .get_updates_read_timeout(10)
         .build()
     )
 
@@ -47,9 +49,12 @@ def main():
     unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
 
+    whos_handler = CommandHandler('whos', ws.date)
+    whos_conv = ws.conversation(entry=[whos_handler])
+
     help_handler = CommandHandler("help", s.help)
 
-    app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv])
+    app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv, whos_conv])
     app.add_handler(help_handler)
     app.add_error_handler(error_handler)
 
