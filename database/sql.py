@@ -6,7 +6,7 @@ import datetime
 from typing import Sequence, Tuple
 from loguru import logger
 
-from sqlalchemy import Row, Select, select, update, create_engine, text
+from sqlalchemy import Engine, Row, Select, select, update, create_engine, text
 from sqlalchemy.orm import Session
 
 from .schema import Users, Mastertable, SecureTable
@@ -16,14 +16,14 @@ from .masterdata import MasterTable as mt
 FORMAT = "%d-%m-%Y %A"
 
 logger.catch()
-def check_connection(engine):
+def check_connection(engine: Engine):
     stmt = select(text("'ok'"))
     with Session(engine) as session:
         r = session.execute(stmt)
     logger.success('Connection {}', r.first()[0])
 
 
-def select_days(engine, d: int):
+def select_days(engine: Engine, d: int):
 
     today = datetime.date.today()
 
@@ -44,7 +44,7 @@ def select_days(engine, d: int):
     return [day.strftime(FORMAT) for day in dates]
 
 
-def select_free_seats(engine, date: datetime) -> Sequence[int]:
+def select_free_seats(engine: Engine, date: datetime) -> Sequence[int]:
     logger.debug("свободные места для даты {}".format(date))
     # d = datetime.datetime.strptime(date, FORMAT)
 
@@ -61,7 +61,7 @@ def select_free_seats(engine, date: datetime) -> Sequence[int]:
     return seats
 
 
-def select_my_seats_to_unbook(engine, chat_id) -> Sequence[Row[Tuple[datetime.datetime | int]]]:
+def select_my_seats_to_unbook(engine: Engine, chat_id) -> Sequence[Row[Tuple[datetime.datetime | int]]]:
     today = datetime.date.today()
 
     with Session(engine) as session:
@@ -85,7 +85,7 @@ def select_my_seats_to_unbook(engine, chat_id) -> Sequence[Row[Tuple[datetime.da
     return dates
 
 
-def book_seat(engine, chat_id, selected_seat, selected_date) -> int:
+def book_seat(engine: Engine, chat_id, selected_seat, selected_date) -> int:
 
     with Session(engine) as session:
         user_id_stmt = select(Users.id).where(Users.chat_id == chat_id)
@@ -153,7 +153,7 @@ def book_seat(engine, chat_id, selected_seat, selected_date) -> int:
             return 1
 
 
-def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):
+def unbook_seat(engine: Engine, selected_unbook_seat, selected_unbook_date):
 
     logger.debug("{} - {}".format(selected_unbook_date, selected_unbook_seat))
     with Session(engine) as session:
@@ -168,7 +168,7 @@ def unbook_seat(engine, selected_unbook_seat, selected_unbook_date):
         session.commit()
 
 
-def check_user_chat_id(engine, chat_id) -> Row[Tuple[Users]] | None:
+def check_user_chat_id(engine: Engine, chat_id) -> Row[Tuple[Users]] | None:
 
     with Session(engine) as session:
         stmt = select(Users).filter_by(chat_id=chat_id)
@@ -177,7 +177,7 @@ def check_user_chat_id(engine, chat_id) -> Row[Tuple[Users]] | None:
     return row
 
 
-def check_user_username(engine, username):
+def check_user_username(engine: Engine, username):
 
     with Session(engine) as session:
         stmt = select(Users).filter_by(username=username)
@@ -186,7 +186,7 @@ def check_user_username(engine, username):
     return row
 
 
-def insert_user(engine, **kwargs):
+def insert_user(engine: Engine, **kwargs):
 
     with Session(engine) as session:
 
@@ -204,7 +204,7 @@ def insert_user(engine, **kwargs):
     )
 
 
-def check_password(engine, password) -> bool:
+def check_password(engine: Engine, password) -> bool:
     password = mt.make_password(passwd=password)
     logger.debug(password)
 
@@ -223,7 +223,7 @@ def check_password(engine, password) -> bool:
 
     logger.debug(access)
 
-def show_who_booked(engine, date: datetime) -> str:
+def show_who_booked(engine: Engine, date: datetime) -> str:
 
     with Session(engine) as session:
         stmt = (select(Users.username, Mastertable.seats)
@@ -239,6 +239,13 @@ def show_who_booked(engine, date: datetime) -> str:
         s += '{} - @{}\n'.format(i[1], i[0])
     
     return s
+
+def show_chat_ids(engine: Engine):
+
+    stmt = select(Users.chat_id).filter(Users.chat_id.notin_((-1, 123)))
+    with Session(engine) as session:
+        chat_ids = session.scalars(stmt).all()
+    return chat_ids
 
 
 if __name__ == "__main__":
