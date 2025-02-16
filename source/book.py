@@ -173,7 +173,7 @@ class BookSeat(Start):
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
-        conversation = ConversationHandler(per_message=False,
+        conversation = ConversationHandler(
             entry_points=entry,
             states={
                 self.DATES: [

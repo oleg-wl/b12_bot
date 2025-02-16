@@ -74,7 +74,7 @@ def select_my_seats_to_unbook(engine, chat_id) -> Sequence[Row[Tuple[datetime.da
             select(Mastertable.period_day, Mastertable.seats)
             .order_by(Mastertable.period_day)
             .where(Mastertable.is_weekend == 0)
-            .where(Mastertable.user_id == select(userid_subquery))
+            .where(Mastertable.user_id == userid_subquery)
             .where(Mastertable.period_day >= today)
             .distinct()
             .limit(5)

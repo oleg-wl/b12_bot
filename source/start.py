@@ -37,6 +37,7 @@ class Start:
             )
             logger.success('in group chat {}', message_id)
             return ConversationHandler.END
+        return None
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -119,7 +120,7 @@ class Start:
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
-        conversation = ConversationHandler(per_message=False,
+        conversation = ConversationHandler(
             entry_points=entry,
             states={
                 self.AUTH: [

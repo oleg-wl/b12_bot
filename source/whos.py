@@ -27,8 +27,8 @@ class WhosSeat(Start):
     
     async def date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
-        #TODO: пофиксить
-        await self._check_group(update=update, context=context)
+        _check_group_chat: int | None = await self._check_group(update=update, context=context)
+        if _check_group_chat: return _check_group_chat
 
         uid: int = update.effective_chat.id
 
@@ -67,7 +67,8 @@ class WhosSeat(Start):
 
     def conversation(self, entry):
         
-        conversation = ConversationHandler(per_message=False,
+        conversation = ConversationHandler(
+            #per_message=False,
             entry_points=entry, conversation_timeout=30,
             states={
                 self.DATE: [

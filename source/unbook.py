@@ -157,7 +157,7 @@ class UnbookSeat(Start):
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
         conversation = ConversationHandler(
-            per_message=False,
+            #per_message=False,
             entry_points=entry,
             states={
                 self.MYSEATS: [
