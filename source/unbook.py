@@ -80,7 +80,7 @@ class UnbookSeat(Start):
         logger.debug('=== update callback query {} ===', update.callback_query)
         if update.callback_query != None:
             query = update.callback_query
-            query.answer()
+            await query.answer()
 
             await query.edit_message_text(
                 text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
