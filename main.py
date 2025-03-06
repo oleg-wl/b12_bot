@@ -20,10 +20,10 @@ from telegram.ext import (
 )
 
 
-@logger.catch()
+load_dotenv("config.env")
+
 def main():
 
-    load_dotenv("config.env")
     token = os.getenv("BOT_API")
 
     s = Start()
@@ -58,7 +58,7 @@ def main():
     app.add_handler(help_handler)
     app.add_error_handler(error_handler)
 
-    app.run_polling(timeout=30)
+    app.run_polling()
 
 
 if __name__ == "__main__":
@@ -66,12 +66,12 @@ if __name__ == "__main__":
     fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | {message}"
 
     logger.remove()
-    logger.add(sys.stdout, format=fmt, level="ERROR", colorize=True)
+    logger.add(sys.stdout, format=fmt, level="DEBUG", colorize=True)
     logger.add(
         "b12bot.log",
         format=fmt,
         colorize=False,
-        level="DEBUG",
+        level="INFO",
         rotation="5MB",
         backtrace=True,
         diagnose=True,

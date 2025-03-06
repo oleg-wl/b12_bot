@@ -1,9 +1,9 @@
 """This is a very simple example on how one could implement a custom error handler."""
-import html
 import json
 from loguru import logger
 import traceback
 import os
+import datetime
 
 from telegram import Update
 from telegram.constants import ParseMode
@@ -13,7 +13,6 @@ LOG_CHAT_ID = os.getenv('LOG_CHAT_ID')
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Log the error and send a telegram message to notify the developer."""
 
     # Log the error before we do anything else, so we can see it even if something breaks.
     logger.error(context.error)
@@ -27,26 +26,19 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # You might need to add some logic to deal with messages longer than the 4096 character limit.
     update_str = update.to_dict() if isinstance(update, Update) else str(update)
     
-    message_1: str = (
-        "An exception was rised in bot \n"
-        "</pre>\n\n"
-        f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
+    error_log_message: str = (
+        f"|{datetime.datetime.now().strftime(format='%d.%m.%Y %H:%M:%S')}|ERROR|\n"
+        f"update = {json.dumps(update_str, indent=2, ensure_ascii=False)}"
+        f"context.chat_data = {str(context.chat_data)}\n\n"
+        f"context.user_data = {str(context.user_data)}\n\n"
+        f"{tb_string}"
+    )
 
-    )
-    
-    message_2 = (
-        f"<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n"
-        f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
-        f"<pre>{html.escape(tb_string)}</pre>"
-    )
-    if len(message_1) > 4095: message_1 = message_1[-4095:] 
-    if len(message_2) > 4095: message_2 = message_2[-4095:] 
+    with open('error.log', mode='wt', encoding='utf8') as error_file:
+        error_file.write(error_log_message)
+        
 
     # send the message
     await context.bot.send_message(
-        chat_id=LOG_CHAT_ID, text=message_1, parse_mode=ParseMode.HTML
-    )
-
-    await context.bot.send_message(
-        chat_id=LOG_CHAT_ID, text=message_2, parse_mode=ParseMode.HTML
+        chat_id=LOG_CHAT_ID, text='b12bot: exception \n'+context.error, parse_mode=ParseMode.HTML
     )
