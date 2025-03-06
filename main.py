@@ -49,7 +49,7 @@ def main():
     unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
 
-    whos_handler = CommandHandler('whos', ws.date)
+    whos_handler = CommandHandler('whos', ws.whos_date)
     whos_conv = ws.conversation(entry=[whos_handler])
 
     help_handler = CommandHandler("help", s.help)

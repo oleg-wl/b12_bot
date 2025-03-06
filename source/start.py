@@ -36,8 +36,8 @@ class Start:
 
             )
             logger.success('in group chat {}', message_id)
-            return ConversationHandler.END
-        return None
+            return True
+        return False
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

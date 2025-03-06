@@ -19,24 +19,26 @@ from .start import Start
 
 
 class WhosSeat(Start):
-    DATE, BACK = range(1, 3)
+    DATE, BACK = range(10, 12)
 
     def __init__(self):
         super().__init__()
 
     
-    async def date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    async def whos_date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         _check_group_chat: int | None = await self._check_group(update=update, context=context)
-        if _check_group_chat: return _check_group_chat
+
+        logger.debug('check group chat -  {}'.format(_check_group_chat))
+        if _check_group_chat: return ConversationHandler.END
 
         uid: int = update.effective_chat.id
 
         self.days = database.select_days(engine=database.engine, d=3)
-        kb_days: InlineKeyboardMarkup = self.kb.build_days_keyboard(days=self.days)
+        kb_days: InlineKeyboardMarkup = self.kb.build_whos_keyboard(days=self.days)
 
-        if (update.callback_query) and (update.callback_query != None):
-            query = update.callback_query
+        query = update.callback_query
+        if (query) and (query != None):
             await query.answer()
 
             await query.edit_message_text(
@@ -47,7 +49,7 @@ class WhosSeat(Start):
         
         return self.DATE
     
-    async def whos(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+    async def whos_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         query = update.callback_query
         await query.answer()
@@ -55,7 +57,7 @@ class WhosSeat(Start):
         d = update.callback_query.data
         if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
             selected_date = datetime.datetime.strptime(
-                self.days[int(update.callback_query.data.lower())], database.FORMAT
+                self.days[int(update.callback_query.data.lower()) - 10], database.FORMAT
             ).date()
         
         whos_msg = database.show_who_booked(engine=database.engine, date=selected_date)
@@ -68,16 +70,17 @@ class WhosSeat(Start):
     def conversation(self, entry):
         
         conversation = ConversationHandler(
-            #per_message=False,
-            entry_points=entry, conversation_timeout=30,
+            entry_points=entry,
             states={
                 self.DATE: [
-                    CallbackQueryHandler(callback=self.whos),
+                    CallbackQueryHandler(callback=self.whos_message),
                 ],
                 self.BACK: [
-                    CallbackQueryHandler(callback=self.date, pattern="back"),
+                    CallbackQueryHandler(callback=self.whos_date, pattern="back"),
                 ],
             },
             fallbacks=entry,
+            conversation_timeout=10
+            #per_message=True
         )
         return conversation

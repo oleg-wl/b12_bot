@@ -37,6 +37,16 @@ class KeyboardBuilder:
         ]
 
         return InlineKeyboardMarkup(self._build_menu(day_buttons, 1))
+    
+    def build_whos_keyboard(self, days: list) -> InlineKeyboardMarkup:
+        # Клавиатура с днями из запроса для whos 
+
+        day_buttons = [
+            InlineKeyboardButton(day, callback_data=str(i+10))
+            for i, day in enumerate(days)
+        ]
+
+        return InlineKeyboardMarkup(self._build_menu(day_buttons, 1))
 
     def build_seats_keyboard(self, seats: list) -> InlineKeyboardMarkup:
         # клавиатура с свободными местами

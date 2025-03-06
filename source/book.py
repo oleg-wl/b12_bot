@@ -189,5 +189,7 @@ class BookSeat(Start):
                 ],
             },
             fallbacks=entry,
+            conversation_timeout=10,
+            per_message=True
         )
         return conversation

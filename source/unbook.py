@@ -108,7 +108,7 @@ class UnbookSeat(Start):
         try:
             i = int(query.data)
         except ValueError:
-            pass
+            logger.error('error with query data')
         else:
             logger.debug("/unbook:selected to unbook callback: {}", i)
 
@@ -157,7 +157,6 @@ class UnbookSeat(Start):
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
         conversation = ConversationHandler(
-            #per_message=False,
             entry_points=entry,
             states={
                 self.MYSEATS: [
@@ -169,5 +168,7 @@ class UnbookSeat(Start):
                 ],
             },
             fallbacks=entry,
+            conversation_timeout=10
+            #per_message=True,
         )
         return conversation

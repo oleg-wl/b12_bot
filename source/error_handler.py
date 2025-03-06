@@ -26,18 +26,27 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # Build the message with some markup and additional information about what happened.
     # You might need to add some logic to deal with messages longer than the 4096 character limit.
     update_str = update.to_dict() if isinstance(update, Update) else str(update)
-    message = (
+    
+    message_1: str = (
         "An exception was rised in bot \n"
-     #   f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
-     #   "</pre>\n\n"
+        "</pre>\n\n"
+        f"<pre>update = {html.escape(json.dumps(update_str, indent=2, ensure_ascii=False))}"
+
+    )
+    
+    message_2 = (
         f"<pre>context.chat_data = {html.escape(str(context.chat_data))}</pre>\n\n"
         f"<pre>context.user_data = {html.escape(str(context.user_data))}</pre>\n\n"
         f"<pre>{html.escape(tb_string)}</pre>"
     )
-    if len(message) > 4095: message = message[-4095:] 
+    if len(message_1) > 4095: message_1 = message_1[-4095:] 
+    if len(message_2) > 4095: message_2 = message_2[-4095:] 
 
     # send the message
     await context.bot.send_message(
-        chat_id=LOG_CHAT_ID, text=message, parse_mode=ParseMode.HTML
+        chat_id=LOG_CHAT_ID, text=message_1, parse_mode=ParseMode.HTML
     )
 
+    await context.bot.send_message(
+        chat_id=LOG_CHAT_ID, text=message_2, parse_mode=ParseMode.HTML
+    )
