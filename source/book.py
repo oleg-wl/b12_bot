@@ -34,24 +34,18 @@ class BookSeat(Start):
     async def dates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         uid: int = update.effective_chat.id
 
-        if update.effective_chat.type in ['group', 'supergroup']:
-            message_id = update.message.message_id
+        #проверка что бот не в групповом чате
+        _check_group_chat: int | None = await self._check_group(update=update, context=context)
 
-            kb = [[InlineKeyboardButton('Написать боту', url = 'tg://user?id={}'.format(context.bot.id))]]
+        logger.bind(user=context._user_id, chat=context._chat_id).debug('check group chat - {}'.format(_check_group_chat))
+        if _check_group_chat: return ConversationHandler.END
 
-            await update.message.reply_text(
-                reply_to_message_id=message_id,
-                text = 'Привет {}. Для брони мест напиши мне в личные сообщения'.format(update.message.from_user.name),
-                reply_markup = InlineKeyboardMarkup(kb)
-
-            )
-            logger.success('/book in group chat {}', message_id)
-            return ConversationHandler.END
-
+        # забрать дни
         self.days = database.select_days(engine=database.engine, d=3)
         kb_days = self.kb.build_days_keyboard(days=self.days)
         
         logger.debug(self.days)
+        logger.info(f"{context._chat_id}")
 
         #проверка на callback_query сценарий: кнопка "Вернуться"
         if update.callback_query != None:
@@ -137,7 +131,7 @@ class BookSeat(Start):
 
         match c:
             case 0:
-                logger.debug(f"truing parralel update {c}")
+                logger.debug(f"trying parralel update {c}")
                 fs = self.kb.build_seats_keyboard(self.free_seats)
                 await query.edit_message_caption(
                     caption="Выбранное место уже заняли пока ты выбирал",
@@ -170,6 +164,24 @@ class BookSeat(Start):
 
                 return ConversationHandler.END
 
+    async def cancel_conversation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        
+        _message = update.message
+        
+        query = update.callback_query
+        await query.answer()
+
+        if _message.caption: #проверить если сообщение с картинкой
+            
+            await query.edit_message_caption('Диалог завершен')
+
+        elif _message.text:  #проверить если в сообщении текст
+
+            await query.edit_message_text('Диалог завершен')
+            
+        return ConversationHandler.END
+            
+            
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
@@ -188,8 +200,10 @@ class BookSeat(Start):
                     CallbackQueryHandler(callback=self.book, pattern="book"),
                 ],
             },
-            fallbacks=entry,
-            conversation_timeout=10,
-            per_message=True
+            fallbacks=[CallbackQueryHandler(callback=self.cancel_conversation, pattern='cancel')],
+            #conversation_timeout=20,
+            #per_message=True,
+            per_chat=True,
+            per_user=True,
         )
         return conversation

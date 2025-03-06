@@ -37,6 +37,7 @@ def main():
         .token(token)
 #        .read_timeout(10)
 #        .get_updates_read_timeout(10)
+        .concurrent_updates(concurrent_updates=False)
         .build()
     )
 
@@ -63,7 +64,7 @@ def main():
 
 if __name__ == "__main__":
 
-    fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | {message}"
+    fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | user: {extra[user]} chat: {extra[chat]} - {message}"
 
     logger.remove()
     logger.add(sys.stdout, format=fmt, level="DEBUG", colorize=True)

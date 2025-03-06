@@ -15,10 +15,10 @@ from telegram.ext import (
 
 import database
 
-from .start import Start
+from .book import BookSeat
 
 
-class WhosSeat(Start):
+class WhosSeat(BookSeat):
     DATE, BACK = range(10, 12)
 
     def __init__(self):
@@ -35,7 +35,7 @@ class WhosSeat(Start):
         uid: int = update.effective_chat.id
 
         self.days = database.select_days(engine=database.engine, d=3)
-        kb_days: InlineKeyboardMarkup = self.kb.build_whos_keyboard(days=self.days)
+        kb_days: InlineKeyboardMarkup = self.kb.build_days_keyboard(days=self.days)
 
         query = update.callback_query
         if (query) and (query != None):
@@ -79,8 +79,10 @@ class WhosSeat(Start):
                     CallbackQueryHandler(callback=self.whos_date, pattern="back"),
                 ],
             },
-            fallbacks=entry,
-            conversation_timeout=10
-            #per_message=True
+            fallbacks=[CallbackQueryHandler(callback=self.cancel_conversation, pattern='cancel')],
+            #conversation_timeout=10,
+            #per_message=True,
+            per_chat=True,
+            per_user=True,
         )
         return conversation
