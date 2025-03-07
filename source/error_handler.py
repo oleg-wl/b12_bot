@@ -13,6 +13,7 @@ LOG_CHAT_ID = os.getenv('LOG_CHAT_ID')
 
 
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+    # Handler пишет трейсбек в файл error.log и сообщает в чат об ошибке
 
     # Log the error before we do anything else, so we can see it even if something breaks.
     logger.error(context.error)

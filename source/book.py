@@ -27,6 +27,8 @@ class BookSeat(Start):
         super().__init__()
         logger.debug(self.__repr__())
 
+        self.selected_seat: str = None
+        self.selected_date: datetime.datetime = None
 
     def __repr__(self):
         return "book class init"
@@ -37,18 +39,17 @@ class BookSeat(Start):
         #проверка что бот не в групповом чате
         _check_group_chat: int | None = await self._check_group(update=update, context=context)
 
-        logger.bind(user=context._user_id, chat=context._chat_id).debug('check group chat - {}'.format(_check_group_chat))
+        logger.bind(user=update.effective_user.name, chat=context._chat_id).debug('check group chat - {}'.format(_check_group_chat))
         if _check_group_chat: return ConversationHandler.END
 
         # забрать дни
         self.days = database.select_days(engine=database.engine, d=3)
         kb_days = self.kb.build_days_keyboard(days=self.days)
         
-        logger.debug(self.days)
-        logger.info(f"{context._chat_id}")
+        logger.bind(user=update.effective_user.name, chat=context._chat_id).info("Enter conversation book")
 
         #проверка на callback_query сценарий: кнопка "Вернуться"
-        if update.callback_query != None:
+        if update.callback_query != None and update.callback_query.data == 'back':
             query = update.callback_query
             await query.answer()
 
@@ -59,6 +60,7 @@ class BookSeat(Start):
 
         await context.bot.send_photo(chat_id=uid, caption="Выбери день для брони", reply_markup=kb_days, photo='seats.jpg')
         
+        logger.bind(user=update.effective_user.name, chat=context._chat_id).info("conversation book, selected date {}".format(self.selected_date))
         return self.DATES
 
     async def seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -74,15 +76,14 @@ class BookSeat(Start):
         self.free_seats: filters.Sequence[str] = database.select_free_seats(
             engine=database.engine, date=self.selected_date
         )
-        logger.debug("selected date {}".format(self.selected_date))
-        logger.debug("free seats {}".format(self.free_seats))
+        logger.bind(user=update.effective_user.name, chat=context._chat_id).info("Conversation book, state {}".format(self.DATES))
 
         # если свободных мест нет
         if (len(self.free_seats) <= 0) | (self.free_seats == None):
             await query.edit_message_caption(
                 caption="Свободных мест на эту дату нет", reply_markup=self.kb.bkb
             )
-            return self.SEATS
+            return self.DATES
         
         else:
 
@@ -91,6 +92,7 @@ class BookSeat(Start):
                 caption="Выбери место", reply_markup=fs
             )
 
+            logger.bind(user=update.effective_user.name, chat=context._chat_id).info("conversation book, state {}, selected date{}".format(self.DATES, self.selected_date))
             return self.SEATS
 
 
@@ -102,7 +104,8 @@ class BookSeat(Start):
         self.selected_seat: str = self.free_seats[
             int(update.callback_query.data.lower())
         ]
-        logger.debug("Selected seat {}".format(self.selected_seat))
+
+        logger.bind(user=update.effective_user.name, chat=context._chat_id).info("conversation book, state {}, selected seat {}".format(self.SEATS, self.selected_seat))
 
         await query.edit_message_caption(
             caption=f"Занять {self.selected_seat} на {self.selected_date}?",
@@ -131,7 +134,7 @@ class BookSeat(Start):
 
         match c:
             case 0:
-                logger.debug(f"trying parralel update {c}")
+                logger.bind(user=update.effective_user.name, chat=context._chat_id).debug(f"parralel book {c}")
                 fs = self.kb.build_seats_keyboard(self.free_seats)
                 await query.edit_message_caption(
                     caption="Выбранное место уже заняли пока ты выбирал",
@@ -140,8 +143,8 @@ class BookSeat(Start):
                 return self.SEATS
 
             case 1:
-                logger.debug(
-                    f"seat booked {self.selected_seat} on {self.selected_date}"
+                logger.bind(user=update.effective_user.name, chat=context._chat_id).info(
+                    f"Забронировано место {self.selected_seat}, дата - {self.selected_date}"
                 )
                 msg = f"{self.selected_date.strftime(database.FORMAT)} забронировано место - {self.selected_seat}"
                 await query.edit_message_caption(
