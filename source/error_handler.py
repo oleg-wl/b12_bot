@@ -16,7 +16,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # Handler пишет трейсбек в файл error.log и сообщает в чат об ошибке
 
     # Log the error before we do anything else, so we can see it even if something breaks.
-    logger.error(context.error)
+    #logger.error(context.error)
 
     # traceback.format_exception returns the usual python message about an exception, but as a
     # list of strings rather than a single string, so we have to join them together.
@@ -26,7 +26,8 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
     # Build the message with some markup and additional information about what happened.
     # You might need to add some logic to deal with messages longer than the 4096 character limit.
     update_str = update.to_dict() if isinstance(update, Update) else str(update)
-    
+
+    # полную ошибку записать в файл
     error_log_message: str = (
         f"|{datetime.datetime.now().strftime(format='%d.%m.%Y %H:%M:%S')}|ERROR|\n"
         f"update = {json.dumps(update_str, indent=2, ensure_ascii=False)}"
@@ -39,7 +40,7 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         error_file.write(error_log_message)
         
 
-    # send the message
+    # отправить только сообшение об ошибке 
     await context.bot.send_message(
-        chat_id=LOG_CHAT_ID, text='b12bot: exception \n'+context.error, parse_mode=ParseMode.HTML
+        chat_id=LOG_CHAT_ID, text='b12bot: exception \n'+ traceback.format_exc().splitlines()[-1]
     )

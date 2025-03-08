@@ -1,3 +1,5 @@
+from abc import ABC, abstractmethod
+
 import datetime
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -15,15 +17,17 @@ import database
 
 from .utils import KeyboardBuilder
 
+class Core(ABC):
 
-class Start:
+    def __init__(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        pass
 
-    AUTH = 1
-
-    kb = KeyboardBuilder()
+    @abstractmethod
+    def conversation(self, entry):
+        pass
 
     async def _check_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-
+        
         if update.effective_chat.type in ['group', 'supergroup']:
             message_id = update.message.message_id
 
@@ -35,9 +39,19 @@ class Start:
                 reply_markup = InlineKeyboardMarkup(kb)
 
             )
-            logger.success('in group chat {}', message_id)
+            logger.info('попытка написать в групповой чат {}', message_id)
             return True
         return False
+
+
+
+
+class Start:
+
+    AUTH = 1
+
+    kb = KeyboardBuilder()
+
 
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

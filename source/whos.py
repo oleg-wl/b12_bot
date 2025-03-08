@@ -57,7 +57,7 @@ class WhosSeat(BookSeat):
         d = update.callback_query.data
         if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
             selected_date = datetime.datetime.strptime(
-                self.days[int(update.callback_query.data.lower()) - 10], database.FORMAT
+                self.days[int(update.callback_query.data.lower())], database.FORMAT
             ).date()
         
         whos_msg = database.show_who_booked(engine=database.engine, date=selected_date)

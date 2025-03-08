@@ -23,10 +23,12 @@ GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
 
 class UnbookSeat(Start):
 
+    MYSEATS, UNBOOK = range(6, 8)
+
+    booked_seats: Sequence[Row[Tuple[datetime.datetime, int]]] = None
+    
     def __init__(self) -> None:
         super().__init__()
-
-    MYSEATS, UNBOOK = range(6, 8)
 
     def __repr__(self):
         return "Экземпляр класса UnbookSeats"
@@ -34,30 +36,14 @@ class UnbookSeat(Start):
     async def check_my_seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         uid = update.effective_chat.id
+        
+        # Проверка на сообщение в групповом чате
+        _check_group_chat: int | None = await self._check_group(update=update, context=context)
 
-        if update.effective_chat.type in ["group", "supergroup"]:
-            message_id = update.message.message_id
+        if _check_group_chat: return ConversationHandler.END
 
-            kb = [
-                [
-                    InlineKeyboardButton(
-                        "Написать боту",
-                        url="tg://user?id={}".format(context.bot.id),
-                    )
-                ]
-            ]
-
-            await update.message.reply_text(
-                reply_to_message_id=message_id,
-                text="Привет {}. Для брони мест напиши мне в личные сообщения".format(
-                    update.message.from_user.name
-                ),
-                reply_markup=InlineKeyboardMarkup(kb),
-            )
-            logger.debug("/Start command in groupchat")
-            return ConversationHandler.END
-
-        self.booked_seats: Sequence[Row[Tuple[datetime.datetime, int]]] = (
+        # выбрать места для брони
+        self.booked_seats = (
             database.select_my_seats_to_unbook(engine=database.engine, chat_id=uid)
         )
 
@@ -75,9 +61,7 @@ class UnbookSeat(Start):
             date = r[0].strftime(database.FORMAT)
             seat: str = r[1]
             buttons.append("{} место {}".format(date, seat))
-            logger.debug("Types check: date {}, seat {}", date, seat)
 
-        logger.debug('=== update callback query {} ===', update.callback_query)
         if update.callback_query != None:
             query = update.callback_query
             await query.answer()
@@ -93,8 +77,6 @@ class UnbookSeat(Start):
             text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
             reply_markup=self.kb.build_booked_seats_keyboard(buttons),
         )
-        logger.debug("/Unbook for seats {}", self.booked_seats)
-        logger.debug("/Unbook in send message", self.booked_seats)
 
         return self.MYSEATS
 
@@ -110,15 +92,9 @@ class UnbookSeat(Start):
         except ValueError:
             logger.error('error with query data')
         else:
-            logger.debug("/unbook:selected to unbook callback: {}", i)
 
             self.selected_unbook_date: datetime.datetime = self.booked_seats[i][0]
             self.selected_unbook_seat = self.booked_seats[i][1]
-            logger.debug(
-                "seat to unbook date {} seat {}".format(
-                    self.selected_unbook_date, self.selected_unbook_seat
-                )
-            )
 
             await query.edit_message_text(
                 text="Освободить место {} на {}".format(
@@ -151,7 +127,6 @@ class UnbookSeat(Start):
         )
         await query.edit_message_text(msg)
         await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=msg)
-        logger.debug("message sent to group chat_id {}", GROUP_CHAT_ID)
         return ConversationHandler.END
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
@@ -168,7 +143,9 @@ class UnbookSeat(Start):
                 ],
             },
             fallbacks=entry,
-            #conversation_timeout=10
-            per_message=True,
+            #conversation_timeout=10,
+            #per_message=True,
+            per_chat=True,
+            per_user=True,
         )
         return conversation

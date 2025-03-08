@@ -19,9 +19,9 @@ from telegram.ext import (
     CommandHandler,
 )
 
-
 load_dotenv("config.env")
 
+@logger.catch
 def main():
 
     token = os.getenv("BOT_API")
@@ -64,7 +64,7 @@ def main():
 
 if __name__ == "__main__":
 
-    fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | user: {extra[user]} chat: {extra[chat]} - {message}"
+    fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | {extra} - {message}"
 
     logger.remove()
     logger.add(sys.stdout, format=fmt, level="DEBUG", colorize=True)
