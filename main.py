@@ -7,29 +7,41 @@ from dotenv import load_dotenv
 
 from loguru import logger
 
-from source.start import Start
-from source.book import BookSeat
-from source.unbook import UnbookSeat
-from source.whos import WhosSeat
+from source.start import StartCommand
+from source.book import GROUP_CHAT_ID, BookCommand
+from source.unbook import UnbookCommand
+from source.whos import WhosCommand
 
 from source.error_handler import error_handler
+
+from telegram import (
+    Update
+    )
 
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
+    CallbackContext,
+    ChatJoinRequestHandler
 )
 
 load_dotenv("config.env")
+GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID')
+
+# Обработчики отдельных комманд
+async def chat_join(update: Update, context: CallbackContext):
+    pass
+
 
 @logger.catch
 def main():
 
     token = os.getenv("BOT_API")
 
-    s = Start()
-    b = BookSeat()
-    ub = UnbookSeat()
-    ws = WhosSeat()
+    s = StartCommand()
+    b = BookCommand()
+    ub = UnbookCommand()
+    ws = WhosCommand()
 
     # увеличены таймауты если что-то с сетью
     app = (
@@ -55,6 +67,8 @@ def main():
 
     help_handler = CommandHandler("help", s.help)
 
+    chat_join_handler = ChatJoinRequestHandler(callback=chat_join, chat_id=GROUP_CHAT_ID, block=False)
+
     app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv, whos_conv])
     app.add_handler(help_handler)
     app.add_error_handler(error_handler)
@@ -67,15 +81,33 @@ if __name__ == "__main__":
     fmt = "<green>{time:YYYY-MM-DD at HH:mm:ss}</green> | <level>{level}</level> | {extra} - {message}"
 
     logger.remove()
-    logger.add(sys.stdout, format=fmt, level="DEBUG", colorize=True)
+    logger.add(sys.stdout, 
+               format=fmt, 
+               level="INFO", 
+               colorize=True,
+               catch=True)
+
+    # лог в файл только инфо
     logger.add(
         "b12bot.log",
         format=fmt,
         colorize=False,
         level="INFO",
         rotation="5MB",
+        #backtrace=True,
+        #diagnose=True,
+    )
+
+    # отдельный логгер для ошибок
+    logger.add(
+        "errors.log",
+        format=fmt,
+        colorize=False,
+        level="ERROR",
+        rotation="5MB",
         backtrace=True,
         diagnose=True,
+        catch=True
     )
 
     main()
