@@ -1,6 +1,5 @@
 import datetime
 import re
-import os
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from loguru import logger
@@ -15,26 +14,28 @@ from telegram.ext import (
 
 import database
 
-from .book import BookSeat
+from .start import CoreCommand
 
 
-class WhosSeat(BookSeat):
-    DATE, BACK = range(10, 12)
+class WhosSeat(CoreCommand):
+    
+    STAGE_DATE, STAGE_BACK = range(10, 12)
 
     def __init__(self):
         super().__init__()
-
+    
+    def __repr__(self):
+        return super().__repr__()
     
     async def whos_date(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
-        _check_group_chat: int | None = await self._check_group(update=update, context=context)
+        _, _chat_id, context_logger = self._initialisation(update=update)
 
-        logger.debug('check group chat -  {}'.format(_check_group_chat))
+        _check_group_chat: int | None = await self._check_group(update=update, context=context)
         if _check_group_chat: return ConversationHandler.END
 
-        uid: int = update.effective_chat.id
-
         self.days = database.select_days(engine=database.engine, d=3)
+        #TODO: json
         kb_days: InlineKeyboardMarkup = self.kb.build_days_keyboard(days=self.days)
 
         query = update.callback_query
@@ -43,17 +44,21 @@ class WhosSeat(BookSeat):
 
             await query.edit_message_text(
                 text="Выбери день для просмотра", reply_markup=kb_days)
-            return self.DATE
+            return self.STAGE_DATE
 
-        await context.bot.send_message(chat_id=uid, text="Выбери день для просмотра", reply_markup=kb_days)
+        context_logger.info('whos_date:: {}'.format(repr(self)))
+
+        await context.bot.send_message(chat_id=_chat_id, text="Выбери день для просмотра", reply_markup=kb_days)
         
-        return self.DATE
+        return self.STAGE_DATE
     
     async def whos_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
+        _, _chat_id, context_logger = self._initialisation(update=update)
         query = update.callback_query
         await query.answer()
 
+        #TODO: json
         d = update.callback_query.data
         if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
             selected_date = datetime.datetime.strptime(
@@ -61,21 +66,20 @@ class WhosSeat(BookSeat):
             ).date()
         
         whos_msg = database.show_who_booked(engine=database.engine, date=selected_date)
-        logger.debug('whos message %s'% whos_msg)
 
         await query.edit_message_text(text='Места заняты:\n' + whos_msg, reply_markup=InlineKeyboardMarkup([self.kb.back_button]))
         
-        return self.BACK        
+        return self.STAGE_BACK        
 
     def conversation(self, entry):
         
         conversation = ConversationHandler(
             entry_points=entry,
             states={
-                self.DATE: [
+                self.STAGE_DATE: [
                     CallbackQueryHandler(callback=self.whos_message),
                 ],
-                self.BACK: [
+                self.STAGE_BACK: [
                     CallbackQueryHandler(callback=self.whos_date, pattern="back"),
                 ],
             },
