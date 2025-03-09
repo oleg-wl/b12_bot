@@ -1,4 +1,5 @@
 import datetime
+import json
 import os
 
 from typing import Sequence
@@ -65,9 +66,9 @@ class UnbookCommand(CoreCommand):
 
         context_logger.info('check_my_seats:: {}'.format(repr(self)))
 
-        #TODO: json
-        if update.callback_query != None:
-            query = update.callback_query
+        query = update.callback_query
+
+        if query != None and query.data == '{"action": "back"}':        
             await query.answer()
 
             await query.edit_message_text(
@@ -76,14 +77,14 @@ class UnbookCommand(CoreCommand):
             )
             return self.STAGE_MYSEAT
 
-        #FIXME: ????
-        await context.bot.send_message(
-            chat_id=_chat_id,
-            text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
-            reply_markup=self.kb.build_booked_seats_keyboard(buttons),
-        )
+        else:
+            await context.bot.send_message(
+                chat_id=_chat_id,
+                text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
+                reply_markup=self.kb.build_booked_seats_keyboard(buttons),
+            )
 
-        return self.STAGE_MYSEAT
+            return self.STAGE_MYSEAT
 
     async def check_unbook_seat(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
@@ -92,20 +93,15 @@ class UnbookCommand(CoreCommand):
         _, _, context_logger = self._initialisation(update=update)
         
         query = update.callback_query
-        await query.answer()
 
-        try:
-            i = int(query.data)
+        action, i = self._json_callback(query=query)
+
+        if action == 'booked_seats_command':
+            await query.answer()
+
             self.selected_unbook_date: datetime.datetime = self.booked_seats[i][0]
             self.selected_unbook_seat = self.booked_seats[i][1]
-        
-        except ValueError:
-            context_logger.error('error with query data')
-        except KeyError: 
-            context_logger.error('key error query data')
-            context_logger.debug('qd - {q}, i - {i}, date - {d}, seat - {s}'.format({'q':query.data, 'i': 'i', 'd': self.selected_unbook_date, 's': self.selected_unbook_seat}))
-        
-        else:
+            
             await query.edit_message_text(
                 text="Освободить место {} на {}".format(
                     self.selected_unbook_seat,
@@ -113,7 +109,7 @@ class UnbookCommand(CoreCommand):
                 ),
                 reply_markup=InlineKeyboardMarkup(
                     [
-                        [InlineKeyboardButton(text="Да >>>", callback_data="unbook")],
+                        [InlineKeyboardButton(text="Да >>>", callback_data=json.dumps({"action":"unbook"}))],
                         self.kb.back_button,
                     ]
                 ),
@@ -132,16 +128,19 @@ class UnbookCommand(CoreCommand):
         )
 
         query = update.callback_query
-        await query.answer()
+        action, _ = self._json_callback(query=query)
 
-        msg = "Место {} освобождено на {}".format(
-            self.selected_unbook_seat,
-            self.selected_unbook_date.strftime(database.FORMAT),
-        )
-        context_logger.info('unbook:: {}'.format(repr(self)))
-        await query.edit_message_text(msg)
-        await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=msg)
-        return ConversationHandler.END
+        if action == 'unbook':
+            await query.answer()
+
+            msg = "Место {} освобождено на {}".format(
+                self.selected_unbook_seat,
+                self.selected_unbook_date.strftime(database.FORMAT),
+            )
+            context_logger.info('unbook:: {}'.format(repr(self)))
+            await query.edit_message_text(msg)
+            await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=msg)
+            return ConversationHandler.END
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
@@ -152,8 +151,8 @@ class UnbookCommand(CoreCommand):
                     CallbackQueryHandler(callback=self.check_unbook_seat),
                 ],
                 self.STAGE_UNBOOK: [
-                    CallbackQueryHandler(callback=self.check_my_seats, pattern="back"),
-                    CallbackQueryHandler(callback=self.unbook, pattern="unbook"),
+                    CallbackQueryHandler(callback=self.check_my_seats, pattern='{"action": "back"}'),
+                    CallbackQueryHandler(callback=self.unbook, pattern='{"action": "unbook"}'),
                 ],
             },
             fallbacks=entry,

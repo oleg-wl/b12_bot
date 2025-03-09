@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
 
 import datetime
+import json
 
-from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
+from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from loguru import logger
 
 from telegram.ext import (
@@ -53,6 +54,22 @@ class CoreCommand(ABC):
         context_logger = logger.bind(username = _username, chat_id = _chat_id)
 
         return _username, _chat_id, context_logger
+
+    @classmethod
+    def _json_callback(cls, query: CallbackQuery) -> tuple[str|None, int|None] | None:
+        """
+        в CallbackQuery всегда json!
+        метод десериализует json из callback_query
+
+        :param CallbackQuery query: команда в action
+        :return tuple[str|None, int|None]: i  
+        """
+        s_data: dict = json.loads(query.data)
+
+        action: str | None = str(s_data.get('action')) if s_data.get('action') else None
+        i: int | None = int(s_data.get('i')) if s_data.get('i') else None
+
+        return action, i
         
     @abstractmethod
     def conversation(self, entry):

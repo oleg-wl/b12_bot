@@ -4,11 +4,12 @@
 from loguru import logger
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
+import json
 
 class KeyboardBuilder:
 
-    # inline-кнопка "назад"
-    back_button = [InlineKeyboardButton("<< Вернуться", callback_data="back")]
+    # inline-кнопка "назад" pattern={"action": "back"}
+    back_button = [InlineKeyboardButton("<< Вернуться", callback_data=json.dumps({'action': "back"}))]
     bkb = InlineKeyboardMarkup([back_button])
     
     # inline-кнопка "выйти из диалога"
@@ -32,12 +33,21 @@ class KeyboardBuilder:
         return menu
 
 
-    def build_days_keyboard(self, days: list) -> InlineKeyboardMarkup:
-        # Клавиатура с днями из запроса 
+    def build_days_keyboard(self, action: str, days: list) -> InlineKeyboardMarkup:
+        """
+        Клавиатура с днями для запроса
+        в callback_data передается json с ключем action для дополнительной проверки, если метод используется в разных CallbackQueryHanler-ах
+        итоговый callback должен быть переведен в словарь json loads
+        
+        :param str action: название для проверки 
+        :param list days: лист с днями
+        :return InlineKeyboardMarkup: клавиатура
+        """
 
         day_buttons = [
-            InlineKeyboardButton(day, callback_data=str(i))
-            for i, day in enumerate(days)
+            InlineKeyboardButton(
+                day, callback_data=json.dumps({'action': action, 'i':str(i)}))
+            for i, day in enumerate(days) 
         ]
 
         return InlineKeyboardMarkup(self._build_menu(day_buttons, 1))
@@ -45,8 +55,10 @@ class KeyboardBuilder:
     def build_seats_keyboard(self, seats: list) -> InlineKeyboardMarkup:
         # клавиатура с свободными местами
 
+        action = 'seats'
+        
         seats_buttons = [
-            InlineKeyboardButton(seat, callback_data=str(i))
+            InlineKeyboardButton(seat, callback_data=json.dumps({'action': action, 'i': str(i)}))
             for i, seat in enumerate(seats)
         ]
 
@@ -69,11 +81,17 @@ class KeyboardBuilder:
 
     def build_booked_seats_keyboard(self, booked_seats: list):
 
+        action = 'booked_seats_command'
+
         booked_seats_buttons = [
-            InlineKeyboardButton(booked_seat, callback_data=str(i))
+            InlineKeyboardButton(booked_seat, callback_data=json.dumps({'action': action, 'i':str(i)}))
             for i, booked_seat in enumerate(booked_seats)
         ]
         return InlineKeyboardMarkup(
             self._build_menu(booked_seats_buttons, 1)
         )
 
+if __name__ == '__main__':
+    k = KeyboardBuilder()
+    test = k.build_days_keyboard(action='action', days=['2021-01-01', '2022-01-02'])
+    print(test)

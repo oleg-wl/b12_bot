@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
@@ -35,41 +36,43 @@ class WhosCommand(CoreCommand):
         if _check_group_chat: return ConversationHandler.END
 
         self.days = database.select_days(engine=database.engine, d=3)
-        #TODO: json
-        kb_days: InlineKeyboardMarkup = self.kb.build_days_keyboard(days=self.days)
+        kb_days: InlineKeyboardMarkup = self.kb.build_days_keyboard(action='whos_command', days=self.days)
 
         query = update.callback_query
-        if (query) and (query != None):
+        
+        context_logger.info('whos_date:: {}'.format(repr(self)))
+        if query != None and query.data == '{"action": "back"}':
             await query.answer()
 
             await query.edit_message_text(
                 text="Выбери день для просмотра", reply_markup=kb_days)
             return self.STAGE_DATE
 
-        context_logger.info('whos_date:: {}'.format(repr(self)))
-
-        await context.bot.send_message(chat_id=_chat_id, text="Выбери день для просмотра", reply_markup=kb_days)
-        
-        return self.STAGE_DATE
+        else:
+            await context.bot.send_message(chat_id=_chat_id, text="Выбери день для просмотра", reply_markup=kb_days)
+            
+            return self.STAGE_DATE
     
     async def whos_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
 
         _, _chat_id, context_logger = self._initialisation(update=update)
+        
         query = update.callback_query
-        await query.answer()
+        
+        # проверка коллбека для выбора даты
+        action, i = self._json_callback(query=query)
 
-        #TODO: json
-        d = update.callback_query.data
-        if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
+        if action == 'whos_command':
+            await query.answer()
             selected_date = datetime.datetime.strptime(
-                self.days[int(update.callback_query.data.lower())], database.FORMAT
+                self.days[i], database.FORMAT
             ).date()
         
-        whos_msg = database.show_who_booked(engine=database.engine, date=selected_date)
+            whos_msg = database.show_who_booked(engine=database.engine, date=selected_date)
 
-        await query.edit_message_text(text='Места заняты:\n' + whos_msg, reply_markup=InlineKeyboardMarkup([self.kb.back_button]))
-        
-        return self.STAGE_BACK        
+            await query.edit_message_text(text='Места заняты:\n' + whos_msg, reply_markup=InlineKeyboardMarkup([self.kb.back_button]))
+            
+            return self.STAGE_BACK        
 
     def conversation(self, entry):
         
@@ -80,10 +83,10 @@ class WhosCommand(CoreCommand):
                     CallbackQueryHandler(callback=self.whos_message),
                 ],
                 self.STAGE_BACK: [
-                    CallbackQueryHandler(callback=self.whos_date, pattern="back"),
+                    CallbackQueryHandler(callback=self.whos_date, pattern='{"action": "back"}'),
                 ],
             },
-            fallbacks=[CallbackQueryHandler(callback=self.cancel_conversation, pattern='cancel')],
+            fallbacks=entry,
             #conversation_timeout=10,
             #per_message=True,
             per_chat=True,

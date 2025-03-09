@@ -60,10 +60,12 @@ class BookCommand(CoreCommand):
             )
             return self. STAGE_DATE
 
-        await context.bot.send_photo(chat_id=_chat_id, caption="Выбери день для брони", reply_markup=kb_days, photo='seats.jpg')
-        
-        context_logger.info("dates:: {}".format(repr(self)))
-        return self.STAGE_DATE
+        else:
+
+            await context.bot.send_photo(chat_id=_chat_id, caption="Выбери день для брони", reply_markup=kb_days, photo='seats.jpg')
+            
+            context_logger.info("dates:: {}".format(repr(self)))
+            return self.STAGE_DATE
 
     async def seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         # выбор даты и показ свободных мест на эту дату
@@ -71,12 +73,12 @@ class BookCommand(CoreCommand):
         _, _, context_logger = self._initialisation(update=update)
 
         query = update.callback_query
-        await query.answer()
 
         # проверка коллбека для выбора даты
         action, i = self._json_callback(query=query)
         
         if action == 'dates':
+            await query.answer()
             self.selected_date = datetime.datetime.strptime(
                 self.days[i], database.FORMAT
             ).date()
@@ -203,9 +205,7 @@ class BookCommand(CoreCommand):
                     CallbackQueryHandler(callback=self.book, pattern='{"action": "book"}'),
                 ],
             },
-            fallbacks=[
-                    CallbackQueryHandler(callback=self.seats),
-                ],
+            fallbacks=entry,
             #conversation_timeout=20,
             #per_message=True,
             per_chat=True,

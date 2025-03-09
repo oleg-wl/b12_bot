@@ -33,7 +33,6 @@ async def chat_join(update: Update, context: CallbackContext):
     pass
 
 
-@logger.catch
 def main():
 
     token = os.getenv("BOT_API")
@@ -97,6 +96,7 @@ if __name__ == "__main__":
         rotation="5MB",
         backtrace=False,
         diagnose=False,
+        catch=False
     )
 
     # отдельный логгер для ошибок
