@@ -16,52 +16,56 @@ from telegram.ext import (
 )
 
 import database
-from .start import Start
+from .start import CoreCommand
 
 GROUP_CHAT_ID = os.getenv("GROUP_CHAT_ID")
 
 
-class UnbookSeat(Start):
+class UnbookCommand(CoreCommand):
 
-    MYSEATS, UNBOOK = range(6, 8)
+    STAGE_MYSEAT, STAGE_UNBOOK = range(6, 8)
 
-    booked_seats: Sequence[Row[Tuple[datetime.datetime, int]]] = None
-    
     def __init__(self) -> None:
         super().__init__()
 
+        self.booked_seats: Sequence[Row[Tuple[datetime.datetime, int]]] = None
+
     def __repr__(self):
-        return "Экземпляр класса UnbookSeats"
+        return "UnbookCommand. Attrs: booked seats - {bs}".format({'bs': self.booked_seats})
 
     async def check_my_seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        uid = update.effective_chat.id
+        _username, _chat_id, context_logger = self._initialisation(update=update)
         
         # Проверка на сообщение в групповом чате
         _check_group_chat: int | None = await self._check_group(update=update, context=context)
-
         if _check_group_chat: return ConversationHandler.END
 
         # выбрать места для брони
         self.booked_seats = (
-            database.select_my_seats_to_unbook(engine=database.engine, chat_id=uid)
+            database.select_my_seats_to_unbook(engine=database.engine, chat_id=_chat_id)
         )
+        context_logger.trace('check_my_seats:: booked_seats - {}'.format(self.booked_seats))
 
         # проверка - если нет занятых мест -> конец
         if len(self.booked_seats) == 0:
-            logger.debug("no seats for {}, seats {}", uid, self.booked_seats)
+            
+            context_logger.info("нет нет занятых мест", self.booked_seats)
             await context.bot.send_message(
-                chat_id=uid,
-                text="Ты не занял места на ближайшее время /book - чтобы занять",
+                chat_id=_chat_id,
+                text="Ты не занял места на ближайшее время\n/book - чтобы занять \U0001F4BA",
             )
             return ConversationHandler.END
 
         buttons = []
         for r in self.booked_seats:
-            date = r[0].strftime(database.FORMAT)
+            date: str = r[0].strftime(database.FORMAT)
             seat: str = r[1]
             buttons.append("{} место {}".format(date, seat))
 
+        context_logger.info('check_my_seats:: {}'.format(repr(self)))
+
+        #TODO: json
         if update.callback_query != None:
             query = update.callback_query
             await query.answer()
@@ -70,32 +74,38 @@ class UnbookSeat(Start):
                 text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
                 reply_markup=self.kb.build_booked_seats_keyboard(buttons),
             )
-            return self.MYSEATS
+            return self.STAGE_MYSEAT
 
-        await context.bot.send_message(
-            chat_id=uid,
-            text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
-            reply_markup=self.kb.build_booked_seats_keyboard(buttons),
-        )
-
-        return self.MYSEATS
+        #FIXME: ????
+#        await context.bot.send_message(
+#            chat_id=_chat_id,
+#            text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
+#            reply_markup=self.kb.build_booked_seats_keyboard(buttons),
+#        )
+#
+#        return self.MYSEATS
 
     async def check_unbook_seat(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE
     ):
 
+        _, _, context_logger = self._initialisation(update=update)
+        
         query = update.callback_query
         await query.answer()
 
         try:
             i = int(query.data)
-        except ValueError:
-            logger.error('error with query data')
-        else:
-
             self.selected_unbook_date: datetime.datetime = self.booked_seats[i][0]
             self.selected_unbook_seat = self.booked_seats[i][1]
-
+        
+        except ValueError:
+            context_logger.error('error with query data')
+        except KeyError: 
+            context_logger.error('key error query data')
+            context_logger.debug('qd - {q}, i - {i}, date - {d}, seat - {s}'.format({'q':query.data, 'i': 'i', 'd': self.selected_unbook_date, 's': self.selected_unbook_seat}))
+        
+        else:
             await query.edit_message_text(
                 text="Освободить место {} на {}".format(
                     self.selected_unbook_seat,
@@ -108,9 +118,12 @@ class UnbookSeat(Start):
                     ]
                 ),
             )
-            return self.UNBOOK
+            return self.STAGE_UNBOOK
 
     async def unbook(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        #снять бронь и написать в чат
+        
+        _username, _chat_id, context_logger = self._initialisation(update=update)
 
         database.unbook_seat(
             engine=database.engine,
@@ -125,6 +138,7 @@ class UnbookSeat(Start):
             self.selected_unbook_seat,
             self.selected_unbook_date.strftime(database.FORMAT),
         )
+        context_logger.info('unbook:: {}'.format(repr(self)))
         await query.edit_message_text(msg)
         await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=msg)
         return ConversationHandler.END
@@ -134,10 +148,10 @@ class UnbookSeat(Start):
         conversation = ConversationHandler(
             entry_points=entry,
             states={
-                self.MYSEATS: [
+                self.STAGE_MYSEAT: [
                     CallbackQueryHandler(callback=self.check_unbook_seat),
                 ],
-                self.UNBOOK: [
+                self.STAGE_UNBOOK: [
                     CallbackQueryHandler(callback=self.check_my_seats, pattern="back"),
                     CallbackQueryHandler(callback=self.unbook, pattern="unbook"),
                 ],
