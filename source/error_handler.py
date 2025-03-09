@@ -7,16 +7,17 @@ import datetime
 
 from telegram import Update
 from telegram.constants import ParseMode
-from telegram.ext import ContextTypes
+from telegram.ext import ContextTypes, ConversationHandler
 
 LOG_CHAT_ID = os.getenv('LOG_CHAT_ID')
 
 
-async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
+async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Handler пишет трейсбек в файл error.log и сообщает в чат об ошибке
 
-    # Log the error before we do anything else, so we can see it even if something breaks.
-    #logger.error(context.error)
+    context_logger = logger.bind(username = update.effective_user.username, chat_id = update.effective_chat.id)
+    context_logger.exception(context.error)
+    context_logger.info('Error in error handler')
 
     # traceback.format_exception returns the usual python message about an exception, but as a
     # list of strings rather than a single string, so we have to join them together.
@@ -35,12 +36,10 @@ async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> N
         f"context.user_data = {str(context.user_data)}\n\n"
         f"{tb_string}"
     )
-
-    with open('error.log', mode='wt', encoding='utf8') as error_file:
-        error_file.write(error_log_message)
         
-
     # отправить только сообшение об ошибке 
     await context.bot.send_message(
         chat_id=LOG_CHAT_ID, text='b12bot: exception \n'+ traceback.format_exc().splitlines()[-1]
     )
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id, text='Sorry some error. Поздравляю ты нашел баг \U0001F41E')

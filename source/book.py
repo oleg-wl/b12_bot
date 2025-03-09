@@ -15,42 +15,39 @@ from telegram.ext import (
 
 import database
 
-from .start import Start
+from .start import CoreCommand
 
 GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID') 
 
 
-class BookSeat(Start):
-    DATES, SEATS, BOOK = range(2, 5)
+class BookCommand(CoreCommand):
+
+    STAGE_DATE, STAGE_SEAT, STAGE_BOOK = range(2, 5)
 
     def __init__(self) -> None:
         super().__init__()
 
         self.selected_seat: str = None
         self.selected_date: datetime.datetime = None
+        self.free_seats = None
 
     def __repr__(self):
-        return "book class init"
-
+        return super().__repr__()
+    
     async def dates(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        uid: int = update.effective_chat.id
+        # получить список дат
 
+        _, _chat_id, context_logger = self._initialisation(update=update)
+        
         #проверка что бот не в групповом чате
         _check_group_chat: int | None = await self._check_group(update=update, context=context)
-
-        extra = {
-            'username': update.effective_chat.username,
-            'chat_id': update.effective_chat.id
-                }
-        
-        logger.debug('check group chat - {}'.format(_check_group_chat), extra=extra)
         if _check_group_chat: return ConversationHandler.END
 
         # забрать дни
         self.days = database.select_days(engine=database.engine, d=3)
         kb_days = self.kb.build_days_keyboard(days=self.days)
         
-        logger.info("Enter conversation book")
+        context_logger.trace("dates keyboard - {}". format(kb_days.inline_keyboard))
 
         #проверка на callback_query сценарий: кнопка "Вернуться"
         if update.callback_query != None and update.callback_query.data == 'back':
@@ -60,56 +57,64 @@ class BookSeat(Start):
             await query.edit_message_caption(
                 caption="Выбери день для брони", reply_markup=kb_days
             )
-            return self.DATES
+            return self. STAGE_DATE
 
-        await context.bot.send_photo(chat_id=uid, caption="Выбери день для брони", reply_markup=kb_days, photo='seats.jpg')
+        await context.bot.send_photo(chat_id=_chat_id, caption="Выбери день для брони", reply_markup=kb_days, photo='seats.jpg')
         
-        logger.info("conversation book, selected date {}".format(self.selected_date))
-        return self.DATES
+        context_logger.info("dates:: {}".format(repr(self)))
+        return self.STAGE_DATE
 
     async def seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # выбор даты и показ свободных мест на эту дату
+
+        _, _, context_logger = self._initialisation(update=update)
 
         query = update.callback_query
         await query.answer()
 
+        # проверка коллбека для выбора даты
         d = update.callback_query.data
+        #TODO: добавить проверку json
+        
         if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
             self.selected_date = datetime.datetime.strptime(
                 self.days[int(update.callback_query.data.lower())], database.FORMAT
             ).date()
-        self.free_seats: filters.Sequence[str] = database.select_free_seats(
+        self.free_seats: filters.Sequence[int] = database.select_free_seats(
             engine=database.engine, date=self.selected_date
         )
-        logger.info("Conversation book, state {}".format(self.DATES))
+        context_logger.info("seats:: {}".format(repr(self)))
 
         # если свободных мест нет
         if (len(self.free_seats) <= 0) | (self.free_seats == None):
             await query.edit_message_caption(
                 caption="Свободных мест на эту дату нет", reply_markup=self.kb.bkb
             )
-            return self.DATES
+            return self.STAGE_DATE
         
-        else:
-
+        elif self.free_seats:
             fs = self.kb.build_seats_keyboard(self.free_seats)
             await query.edit_message_caption(
                 caption="Выбери место", reply_markup=fs
             )
+            context_logger.trace("seats keyboard - {}". format(fs.inline_keyboard))
 
-            logger.info("conversation book, state {}, selected date{}".format(self.DATES, self.selected_date))
-            return self.SEATS
+            return self.STAGE_SEAT
 
 
     async def check_book_seat(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        uid: int = update.effective_chat.id
+
+        _, _, context_logger = self._initialisation(update=update)
+        
         query = update.callback_query
         await query.answer()
 
+        #TODO: json
         self.selected_seat: str = self.free_seats[
             int(update.callback_query.data.lower())
         ]
 
-        logger.info("conversation book, state {}, selected seat {}".format(self.SEATS, self.selected_seat))
+        context_logger.info("check_bok_seat:: {}".format(repr(self)))
 
         await query.edit_message_caption(
             caption=f"Занять {self.selected_seat} на {self.selected_date}?",
@@ -120,94 +125,81 @@ class BookSeat(Start):
                 ]
             ),
         )
-        return self.BOOK
+        return self.STAGE_BOOK
 
     async def book(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        uid: int = update.effective_chat.id
-        username = update.effective_chat.username
 
+        
+        _username, _chat_id, context_logger = self._initialisation(update=update)
+        
         c = database.book_seat(
             engine=database.engine,
-            chat_id=uid,
+            chat_id=_chat_id,
             selected_date=self.selected_date,
             selected_seat=self.selected_seat,
         )
+        context_logger.trace(c)
 
         query = update.callback_query
         await query.answer()
 
         match c:
             case 0:
-                logger.warning(f"parralel book {c}")
+                context_logger.warning(f"parralel book {c}")
                 fs = self.kb.build_seats_keyboard(self.free_seats)
                 await query.edit_message_caption(
                     caption="Выбранное место уже заняли пока ты выбирал",
                     reply_markup=fs,
                 )
-                return self.SEATS
+                # вернуть клавиатуру со свободными местами и перейти на стадию выбора места
+                return self.STAGE_SEAT
 
             case 1:
-                logger.info(
-                    f"Забронировано место {self.selected_seat}, дата - {self.selected_date}"
+                context_logger.info(
+                    "book:: {}".format(repr(self))
                 )
                 msg = f"{self.selected_date.strftime(database.FORMAT)} забронировано место - {self.selected_seat}"
                 await query.edit_message_caption(
                     caption=msg,
                 )
 
-                await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=' @{} '.format(username) + msg)
+                await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=' @{} '.format(_username) + msg)
                 return ConversationHandler.END
             
             case _:
-                logger.info(
-                    f"conversation book - с места {c} снята бронь. забронировано место {self.selected_seat} дата - {self.selected_date}"
+                context_logger.info(
+                   f"book:: - unbooked {c}, booked {self.selected_seat}, date {self.selected_date}"
                 )
                 msg = f"{self.selected_date.strftime(database.FORMAT)} забронировано место - {self.selected_seat}. С места {c} снята бронь."
+                
                 await query.edit_message_caption(
                     caption=msg,
                 )
-
-                await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=' @{} '.format(username) + msg)
+                await context.bot.send_message(chat_id=GROUP_CHAT_ID, text=' @{} '.format(_username) + msg)
 
                 return ConversationHandler.END
 
-    async def cancel_conversation(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        
-        _message = update.message
-        
-        query = update.callback_query
-        await query.answer()
-
-        if _message.caption: #проверить если сообщение с картинкой
-            
-            await query.edit_message_caption('Диалог завершен')
-
-        elif _message.text:  #проверить если в сообщении текст
-
-            await query.edit_message_text('Диалог завершен')
-            
-        return ConversationHandler.END
-            
-            
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
 
         conversation = ConversationHandler(
             entry_points=entry,
             states={
-                self.DATES: [
+                self.STAGE_DATE: [
                     CallbackQueryHandler(callback=self.seats),
                 ],
-                self.SEATS: [
+                self.STAGE_SEAT: [
                     CallbackQueryHandler(callback=self.dates, pattern="back"),
                     CallbackQueryHandler(callback=self.check_book_seat),
                 ],
-                self.BOOK: [
+                self.STAGE_BOOK: [
                     CallbackQueryHandler(callback=self.seats, pattern="back"),
                     CallbackQueryHandler(callback=self.book, pattern="book"),
                 ],
             },
-            fallbacks=[CallbackQueryHandler(callback=self.cancel_conversation, pattern='cancel')],
+            fallbacks=[
+                    CallbackQueryHandler(callback=self.seats),
+                ],
             #conversation_timeout=20,
             #per_message=True,
             per_chat=True,

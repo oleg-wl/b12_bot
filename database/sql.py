@@ -39,7 +39,7 @@ def select_days(engine: Engine, d: int):
             .limit(d)
         )
         dates = session.scalars(stmt).all()
-        logger.debug(dates)
+        logger.debug('select days {}'.format(dates))
 
     return [day.strftime(FORMAT) for day in dates]
 
@@ -249,6 +249,8 @@ def show_chat_ids(engine: Engine):
 
 
 if __name__ == "__main__":
+
+    #debug
     eng = create_engine("sqlite:///b12.db")
     days = select_days(engine=eng)
     seats = select_free_seats(engine=eng, date=days[0])

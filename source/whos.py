@@ -17,7 +17,7 @@ import database
 from .start import CoreCommand
 
 
-class WhosSeat(CoreCommand):
+class WhosCommand(CoreCommand):
     
     STAGE_DATE, STAGE_BACK = range(10, 12)
 

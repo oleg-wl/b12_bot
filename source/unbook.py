@@ -31,11 +31,11 @@ class UnbookCommand(CoreCommand):
         self.booked_seats: Sequence[Row[Tuple[datetime.datetime, int]]] = None
 
     def __repr__(self):
-        return "UnbookCommand. Attrs: booked seats - {bs}".format({'bs': self.booked_seats})
+        return super().__repr__()
 
     async def check_my_seats(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        _username, _chat_id, context_logger = self._initialisation(update=update)
+        _, _chat_id, context_logger = self._initialisation(update=update)
         
         # Проверка на сообщение в групповом чате
         _check_group_chat: int | None = await self._check_group(update=update, context=context)
@@ -77,13 +77,13 @@ class UnbookCommand(CoreCommand):
             return self.STAGE_MYSEAT
 
         #FIXME: ????
-#        await context.bot.send_message(
-#            chat_id=_chat_id,
-#            text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
-#            reply_markup=self.kb.build_booked_seats_keyboard(buttons),
-#        )
-#
-#        return self.MYSEATS
+        await context.bot.send_message(
+            chat_id=_chat_id,
+            text="Твои места на ближайшие дни. Выбери, с какого снять бронь",
+            reply_markup=self.kb.build_booked_seats_keyboard(buttons),
+        )
+
+        return self.STAGE_MYSEAT
 
     async def check_unbook_seat(
         self, update: Update, context: ContextTypes.DEFAULT_TYPE

@@ -1,7 +1,12 @@
+# Модуль для отправки сообщений ботом асинхронно
+
+# Немного юникода
+# https://apps.timwhitlock.info/emoji/tables/unicode
+
 from abc import ABC, abstractmethod
 import os
-import aiohttp
 import asyncio
+import aiohttp
 
 from database.db_tools import DBA_tools
 from database.sql import show_chat_ids

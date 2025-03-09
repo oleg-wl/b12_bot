@@ -59,6 +59,7 @@ def main():
     book_seat_handler = CommandHandler("book", b.dates)
     book_seat_conv = b.conversation(entry=[book_seat_handler])
 
+#    FIXME: переименовать unbook в myseats command
     unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
 
@@ -83,7 +84,7 @@ if __name__ == "__main__":
     logger.remove()
     logger.add(sys.stdout, 
                format=fmt, 
-               level="INFO", 
+               level="TRACE", 
                colorize=True,
                catch=True)
 
@@ -94,8 +95,8 @@ if __name__ == "__main__":
         colorize=False,
         level="INFO",
         rotation="5MB",
-        #backtrace=True,
-        #diagnose=True,
+        backtrace=False,
+        diagnose=False,
     )
 
     # отдельный логгер для ошибок
