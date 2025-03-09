@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 import datetime
 
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
-from loguru import logger
+from loguru import Logger, logger
 
 from telegram.ext import (
     ContextTypes,
@@ -17,17 +17,53 @@ import database
 
 from .utils import KeyboardBuilder
 
-class Core(ABC):
+class CoreCommand(ABC):
+    """
+    Абстрактный класс с основными атрибутами и методами для классов бота
 
-    def __init__(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        pass
+    :param _type_ ABC: _description_
+    """
 
+    def __init__(self):
+
+        self.kb = KeyboardBuilder()
+
+    @staticmethod
+    def _initialisation(update: Update) -> tuple[str, str|int, Logger]:
+        """
+        Функция возвращает юзернейм и чат айди и контекстный логгер
+
+        :param Update update: update 
+        :return : _username, _chat_id, context_logger 
+        """
+
+        _username: str = update.effective_chat.username
+        _chat_id: str|int = update.effective_chat.id
+
+        # определить атрибуты контекстного логгера
+        extra = {
+            'username': _username,
+            'chat_id': _chat_id
+            }
+
+        # аттрибут контекстного логгера для логгирования юзернейма и чат айди
+        context_logger: Logger = logger.bind(*extra)
+
+        return _username, _chat_id, context_logger
+        
     @abstractmethod
     def conversation(self, entry):
         pass
 
-    async def _check_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        
+    async def _check_group(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> bool:
+        """
+        Метод для проверки, что запущена команда бота в групповом чате. Заглушка чтобы не пускать в групповой чат спамить
+
+        :param Update update: update class
+        :param ContextTypes.DEFAULT_TYPE context: context class
+        :return bool: 1 - если бот запущен в группе, 0 - если бот в личном чате
+        """
+
         if update.effective_chat.type in ['group', 'supergroup']:
             message_id = update.message.message_id
 
@@ -44,92 +80,82 @@ class Core(ABC):
         return False
 
 
+class StartCommand(CoreCommand):
 
+    STAGE_AUTH = 1
 
-class Start:
-
-    AUTH = 1
-
-    kb = KeyboardBuilder()
-
-
+    def __init__(self):
+        super().__init__()
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         # По команде /start первичная авторизация. Если пароль верный, чатайди запишем в базу и повторная авториация будет не нужна 
-        uid = update.effective_chat.id
-        uname = update.message.from_user.username
 
-        if update.message.chat.type in ['group', 'supergroup']:
-            message_id = update.message.message_id
+        _username, _chat_id, context_logger = StartCommand._initialisation(update=update)
 
-            kb = [[InlineKeyboardButton('Написать боту', url = 'tg://user?id={}'.format(context.bot.id))]]
-
-            await update.message.reply_text(
-                reply_to_message_id=message_id,
-                text = 'Привет {}. Для брони мест напиши мне в личные сообщения'.format(update.message.from_user.name),
-                reply_markup = InlineKeyboardMarkup(kb)
-
-            )
-            logger.success('/Start command in groupchat')
-            return ConversationHandler.END
+        _check_group_chat: int | None = await self._check_group(update=update, context=context)
+        if _check_group_chat: return ConversationHandler.END
 
         # проверить, что юзер уже есть в БД по чатайди
-        user = database.check_user_chat_id(engine=database.engine, chat_id=uid)
+        user = database.check_user_chat_id(engine=database.engine, chat_id=self._chat_id)
 
         if user:
-            logger.success('/Start command in private chat - user: {}', user)
+            context_logger.success('/Start command in private chat')
             await context.bot.send_message(
-                chat_id=uid,
-                text=f"Привет {uname}, рад снова видеть тебя.\n/book - для бронирования места\n/myseats - твои места\n/whois - посмотреть кто занял место (в разработке)",
+                chat_id=_chat_id,
+                text=f"Привет {_username}, рад снова видеть тебя.\n/book - для бронирования места\n/myseats - твои места\n/whois - посмотреть кто занял место (в разработке)",
             )
             return ConversationHandler.END
 
         # если юзера нет попросить пароль
         elif user == None:
-            logger.success('/Start in private chat - try auth -  user: {}', user)
+            logger.success('/Start in private chat - try auth')
             await context.bot.send_message(
-                chat_id=uid,
-                text=f"Привет {uname}, для работы тебе надо авторизоваться. Введи пароль",
+                chat_id=_chat_id,
+                text=f"Привет {_username}, для работы тебе надо авторизоваться. Введи пароль",
             )
             # на шаге авторизации MessageHandler проверит пароль
-            return self.AUTH
+            return self.STAGE_AUTH
 
     async def auth(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        uid: int = update.effective_chat.id
-        fname = update.effective_chat.first_name
-        # заменить юзернейм именем если юзернейм None
-        username = update.effective_chat.username if update.effective_chat.username is not None else fname
-        lname = update.effective_chat.last_name
+
+        _username, _chat_id, context_logger = StartCommand._initialisation(update=update)
+        
         now = datetime.datetime.now()
+
+        first_name = update.effective_chat.first_name
+        last_name = update.effective_chat.last_name
+
+        # fixed: заменить юзернейм именем если юзернейм None
+        username = _username if _username is not None else first_name
 
         passwd = update.message.text
 
         access = database.check_password(engine=database.engine, password=passwd)
-        logger.info('Trying access')
+        context_logger.info('auth trying')
         if access:
             try:
                 database.insert_user(
                     engine=database.engine,
-                    chat_id=uid,
+                    chat_id=_chat_id,
                     username=username,
-                    firstname=fname,
-                    lastname=lname,
+                    firstname=first_name,
+                    lastname=last_name,
                     created_at=now,
                 )
                 await context.bot.send_message(
-                    chat_id=uid, text="Аксес грандед"
+                    chat_id=_chat_id, text="Аксес грандед"
                 )
-                logger.success('Password correct. chat_id:{}, username:{}, firstname:{} inserted', uid, username, fname)
+                context_logger.success('Password correct. chat_id:{}, username:{}, firstname:{} inserted', _chat_id, username, first_name)
                 return ConversationHandler.END
 
             except Exception as e:
-                logger.exception(e)
-                await context.bot.send_message(chat_id=uid, text="some error")
+                context_logger.exception(e)
+                await context.bot.send_message(chat_id=_chat_id, text="some error")
                 return ConversationHandler.END
         else:
-            logger.warning('Password incorrect. pass: {}, chat_id:{}, username:{}, firstname:{} inserted', passwd, uid, username, fname)
-            await context.bot.send_message(chat_id=uid, text='Неверный пароль попробуй еще раз')
-            return self.AUTH
+            context_logger.warning('Password incorrect. pass: {}, chat_id:{}, username:{}, firstname:{} inserted', passwd, _chat_id, username, first_name)
+            await context.bot.send_message(chat_id=_chat_id, text='Неверный пароль попробуй еще раз')
+            return self.STAGE_AUTH
 
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
@@ -137,7 +163,7 @@ class Start:
         conversation = ConversationHandler(
             entry_points=entry,
             states={
-                self.AUTH: [
+                self.STAGE_AUTH: [
                     MessageHandler(callback=self.auth, filters=(~filters.COMMAND)),
                 ],
             },
@@ -147,18 +173,10 @@ class Start:
     
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        if update.message.chat.type in ['group', 'supergroup']:
-            message_id = update.message.message_id
+        _check_group_chat: int | None = await self._check_group(update=update, context=context)
 
-            kb = [[InlineKeyboardButton('Написать боту', url = 'tg://user?id={}'.format(context.bot.id))]]
-
-            await update.message.reply_text(
-                reply_to_message_id=message_id,
-                text = 'Привет {}. Для брони мест напиши мне в личные сообщения'.format(update.message.from_user.name),
-                reply_markup = InlineKeyboardMarkup(kb)
-
-            )
-        else:
+        if not _check_group_chat:
+        
             await update.message.reply_text(
                 text='Бот для брони места в офисе - Невская ратуша, корп4 эт2\nМеста: 2В.001, 2В.007,2В.008, 2В.011, 2В.012, 2А.002, 2А.003 забронены по дефолту. Для брони /book: лимит три дня. если бронить разные места внутри дня, бронь перезаписывается - 1 день - 1 место\nТвои активные брони на ближайшие 5 дней: /myseats\nЕсли надо оптом снять бронь (отпуск или заболел) напиши @lordcrabov'
             )
