@@ -1,4 +1,5 @@
 import datetime
+import json
 import re
 import os
 
@@ -44,16 +45,16 @@ class BookCommand(CoreCommand):
         if _check_group_chat: return ConversationHandler.END
 
         # забрать дни
-        self.days = database.select_days(engine=database.engine, d=3)
-        kb_days = self.kb.build_days_keyboard(days=self.days)
-        
+        self.days: list = database.select_days(engine=database.engine, d=3)
+        kb_days: InlineKeyboardMarkup = self.kb.build_days_keyboard(action='dates', days=self.days)        
         context_logger.trace("dates keyboard - {}". format(kb_days.inline_keyboard))
 
-        #проверка на callback_query сценарий: кнопка "Вернуться"
-        if update.callback_query != None and update.callback_query.data == 'back':
-            query = update.callback_query
-            await query.answer()
+        query = update.callback_query
 
+        #проверка на callback_query сценарий: кнопка "Вернуться"
+        if query != None and query.data == '{"action": "back"}':
+
+            await query.answer()
             await query.edit_message_caption(
                 caption="Выбери день для брони", reply_markup=kb_days
             )
@@ -73,19 +74,25 @@ class BookCommand(CoreCommand):
         await query.answer()
 
         # проверка коллбека для выбора даты
-        d = update.callback_query.data
-        #TODO: добавить проверку json
+        action, i = self._json_callback(query=query)
         
-        if re.fullmatch(pattern=re.compile("[0-9]+"), string=d):
+        if action == 'dates':
             self.selected_date = datetime.datetime.strptime(
-                self.days[int(update.callback_query.data.lower())], database.FORMAT
+                self.days[i], database.FORMAT
             ).date()
-        self.free_seats: filters.Sequence[int] = database.select_free_seats(
-            engine=database.engine, date=self.selected_date
-        )
-        context_logger.info("seats:: {}".format(repr(self)))
+            self.free_seats: filters.Sequence[int] = database.select_free_seats(
+                engine=database.engine, date=self.selected_date
+            )
+            context_logger.info("seats:: {}".format(repr(self)))
 
-        # если свободных мест нет
+        elif action == 'back':
+            self.free_seats: filters.Sequence[int] = database.select_free_seats(
+                engine=database.engine, date=self.selected_date
+            )
+            context_logger.info("seats:: {}".format(repr(self)))
+            
+
+            # если свободных мест нет
         if (len(self.free_seats) <= 0) | (self.free_seats == None):
             await query.edit_message_caption(
                 caption="Свободных мест на эту дату нет", reply_markup=self.kb.bkb
@@ -109,27 +116,26 @@ class BookCommand(CoreCommand):
         query = update.callback_query
         await query.answer()
 
-        #TODO: json
-        self.selected_seat: str = self.free_seats[
-            int(update.callback_query.data.lower())
-        ]
+        action, i = self._json_callback(query=query)
+         
+        if action == 'seats':
+            self.selected_seat: str = self.free_seats[i]
 
-        context_logger.info("check_bok_seat:: {}".format(repr(self)))
-
-        await query.edit_message_caption(
-            caption=f"Занять {self.selected_seat} на {self.selected_date}?",
-            reply_markup=InlineKeyboardMarkup(
-                [
-                    self.kb.back_button,
-                    [InlineKeyboardButton(text="Да >>>", callback_data="book")],
-                ]
-            ),
-        )
-        return self.STAGE_BOOK
+            context_logger.info("check_book_seat:: {}".format(repr(self)))
+            
+            await query.edit_message_caption(
+                caption=f"Занять {self.selected_seat} на {self.selected_date}?",
+                reply_markup=InlineKeyboardMarkup(
+                    [
+                        self.kb.back_button,
+                        [InlineKeyboardButton(text="Да >>>", callback_data=json.dumps({'action':'book'}))],
+                    ]
+                ),
+            )
+            return self.STAGE_BOOK
 
     async def book(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-        
         _username, _chat_id, context_logger = self._initialisation(update=update)
         
         c = database.book_seat(
@@ -189,12 +195,12 @@ class BookCommand(CoreCommand):
                     CallbackQueryHandler(callback=self.seats),
                 ],
                 self.STAGE_SEAT: [
-                    CallbackQueryHandler(callback=self.dates, pattern="back"),
+                    CallbackQueryHandler(callback=self.dates, pattern='{"action": "back"}'),
                     CallbackQueryHandler(callback=self.check_book_seat),
                 ],
                 self.STAGE_BOOK: [
-                    CallbackQueryHandler(callback=self.seats, pattern="back"),
-                    CallbackQueryHandler(callback=self.book, pattern="book"),
+                    CallbackQueryHandler(callback=self.seats, pattern='{"action": "back"}'),
+                    CallbackQueryHandler(callback=self.book, pattern='{"action": "book"}'),
                 ],
             },
             fallbacks=[
