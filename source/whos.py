@@ -24,6 +24,10 @@ class WhosCommand(CoreCommand):
 
     def __init__(self):
         super().__init__()
+        
+        # переопределить кнопку назад
+        self.kb.back_button = [InlineKeyboardButton(text='<< Вернуться',callback_data=json.dumps({"action":"whos_back"}))]
+        self.kb.bkb = InlineKeyboardMarkup([self.kb.back_button])
     
     def __repr__(self):
         return super().__repr__()
@@ -41,7 +45,7 @@ class WhosCommand(CoreCommand):
         query = update.callback_query
         
         context_logger.info('whos_date:: {}'.format(repr(self)))
-        if query != None and query.data == '{"action": "back"}':
+        if query != None and query.data == '{"action": "whos_back"}':
             await query.answer()
 
             await query.edit_message_text(
@@ -75,15 +79,16 @@ class WhosCommand(CoreCommand):
             return self.STAGE_BACK        
 
     def conversation(self, entry):
-        
+        pattern = re.compile(pattern='{"action": "whos_command".*')
+
         conversation = ConversationHandler(
             entry_points=entry,
             states={
                 self.STAGE_DATE: [
-                    CallbackQueryHandler(callback=self.whos_message),
+                    CallbackQueryHandler(callback=self.whos_message, pattern=pattern),
                 ],
                 self.STAGE_BACK: [
-                    CallbackQueryHandler(callback=self.whos_date, pattern='{"action": "back"}'),
+                    CallbackQueryHandler(callback=self.whos_date, pattern='{"action": "whos_back"}'),
                 ],
             },
             fallbacks=entry,

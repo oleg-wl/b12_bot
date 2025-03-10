@@ -22,7 +22,8 @@ from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     CallbackContext,
-    ChatJoinRequestHandler
+    ChatJoinRequestHandler,
+    filters
 )
 
 load_dotenv("config.env")
@@ -48,24 +49,24 @@ def main():
         .token(token)
 #        .read_timeout(10)
 #        .get_updates_read_timeout(10)
-        .concurrent_updates(concurrent_updates=False)
+#        .concurrent_updates(concurrent_updates=False)
         .build()
     )
 
-    start_handler = CommandHandler("start", s.start)
+    start_handler = CommandHandler("start", s.start, filters=filters.COMMAND)
     start_conv = s.conversation(entry=[start_handler])
 
-    book_seat_handler = CommandHandler("book", b.dates)
+    book_seat_handler = CommandHandler("book", b.dates, filters=filters.COMMAND)
     book_seat_conv = b.conversation(entry=[book_seat_handler])
 
 #    FIXME: переименовать unbook в myseats command
-    unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats)
+    unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats, filters=filters.COMMAND)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
 
-    whos_handler = CommandHandler('whos', ws.whos_date)
+    whos_handler = CommandHandler('whos', ws.whos_date, filters=filters.COMMAND)
     whos_conv = ws.conversation(entry=[whos_handler])
 
-    help_handler = CommandHandler("help", s.help)
+    help_handler = CommandHandler("help", s.help, filters=filters.COMMAND)
 
     chat_join_handler = ChatJoinRequestHandler(callback=chat_join, chat_id=GROUP_CHAT_ID, block=False)
 
@@ -93,10 +94,11 @@ if __name__ == "__main__":
         format=fmt,
         colorize=False,
         level="INFO",
-        rotation="5MB",
+        rotation="2MB",
         backtrace=False,
         diagnose=False,
-        catch=False
+        catch=False, 
+        #serialize=True
     )
 
     # отдельный логгер для ошибок
@@ -105,10 +107,11 @@ if __name__ == "__main__":
         format=fmt,
         colorize=False,
         level="ERROR",
-        rotation="5MB",
+        rotation="2MB",
         backtrace=True,
         diagnose=True,
-        catch=True
+        catch=True, 
+        #serialize=True
     )
 
     main()

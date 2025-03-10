@@ -32,6 +32,10 @@ class BookCommand(CoreCommand):
         self.selected_date: datetime.datetime = None
         self.free_seats = None
 
+        # переопределить кнопку назад
+        self.kb.back_button = [InlineKeyboardButton(text='<< Вернуться',callback_data=json.dumps({"action":"book_back"}))]
+        self.kb.bkb = InlineKeyboardMarkup([self.kb.back_button])
+
     def __repr__(self):
         return super().__repr__()
     
@@ -52,7 +56,7 @@ class BookCommand(CoreCommand):
         query = update.callback_query
 
         #проверка на callback_query сценарий: кнопка "Вернуться"
-        if query != None and query.data == '{"action": "back"}':
+        if query != None and query.data == '{"action": "book_back"}':
 
             await query.answer()
             await query.edit_message_caption(
@@ -87,7 +91,7 @@ class BookCommand(CoreCommand):
             )
             context_logger.info("seats:: {}".format(repr(self)))
 
-        elif action == 'back':
+        elif action == 'book_back':
             self.free_seats: filters.Sequence[int] = database.select_free_seats(
                 engine=database.engine, date=self.selected_date
             )
@@ -189,20 +193,22 @@ class BookCommand(CoreCommand):
 
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
+        pattern_seats = re.compile(pattern='{"action": "dates".*')
+        pattern_check = re.compile(pattern='{"action": "seats".*')
 
         conversation = ConversationHandler(
             entry_points=entry,
             states={
                 self.STAGE_DATE: [
-                    CallbackQueryHandler(callback=self.seats),
+                    CallbackQueryHandler(callback=self.seats, pattern=pattern_seats),
                 ],
                 self.STAGE_SEAT: [
-                    CallbackQueryHandler(callback=self.dates, pattern='{"action": "back"}'),
-                    CallbackQueryHandler(callback=self.check_book_seat),
+                    CallbackQueryHandler(callback=self.check_book_seat, pattern=pattern_check),
+                    CallbackQueryHandler(callback=self.dates, pattern='{"action": "book_back"}'),
                 ],
                 self.STAGE_BOOK: [
-                    CallbackQueryHandler(callback=self.seats, pattern='{"action": "back"}'),
                     CallbackQueryHandler(callback=self.book, pattern='{"action": "book"}'),
+                    CallbackQueryHandler(callback=self.seats, pattern='{"action": "book_back"}'),
                 ],
             },
             fallbacks=entry,

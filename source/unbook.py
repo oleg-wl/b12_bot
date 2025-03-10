@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 
+import re
 from typing import Sequence
 from typing import Tuple
 
@@ -30,6 +31,10 @@ class UnbookCommand(CoreCommand):
         super().__init__()
 
         self.booked_seats: Sequence[Row[Tuple[datetime.datetime, int]]] = None
+
+        # переопределить кнопку назад
+        self.kb.back_button = [InlineKeyboardButton(text='<< Вернуться',callback_data=json.dumps({"action":"unbook_back"}))]
+        self.kb.bkb = InlineKeyboardMarkup([self.kb.back_button])
 
     def __repr__(self):
         return super().__repr__()
@@ -68,7 +73,7 @@ class UnbookCommand(CoreCommand):
 
         query = update.callback_query
 
-        if query != None and query.data == '{"action": "back"}':        
+        if query != None and query.data == '{"action": "unbook_back"}':        
             await query.answer()
 
             await query.edit_message_text(
@@ -143,15 +148,16 @@ class UnbookCommand(CoreCommand):
             return ConversationHandler.END
 
     def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
+        pattern = re.compile(pattern='{"action": "booked_seats_command".*')
 
         conversation = ConversationHandler(
             entry_points=entry,
             states={
                 self.STAGE_MYSEAT: [
-                    CallbackQueryHandler(callback=self.check_unbook_seat),
+                    CallbackQueryHandler(callback=self.check_unbook_seat, pattern=pattern),
                 ],
                 self.STAGE_UNBOOK: [
-                    CallbackQueryHandler(callback=self.check_my_seats, pattern='{"action": "back"}'),
+                    CallbackQueryHandler(callback=self.check_my_seats, pattern='{"action": "unbook_back"}'),
                     CallbackQueryHandler(callback=self.unbook, pattern='{"action": "unbook"}'),
                 ],
             },
