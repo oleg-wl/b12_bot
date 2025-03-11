@@ -42,4 +42,5 @@ async def error_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
         chat_id=LOG_CHAT_ID, text='b12bot: exception \n'+ traceback.format_exc().splitlines()[-1]
     )
     await context.bot.send_message(
-        chat_id=update.effective_chat.id, text='Sorry some error. Поздравляю ты нашел баг \U0001F41E')
+        chat_id=update.effective_chat.id, text='\U0001F41E Упс ошибка. попробуй еще раз')
+    return ConversationHandler.END
