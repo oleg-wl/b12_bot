@@ -7,13 +7,6 @@ from dotenv import load_dotenv
 
 from loguru import logger
 
-from source.start import StartCommand
-from source.book import GROUP_CHAT_ID, BookCommand
-from source.unbook import UnbookCommand
-from source.whos import WhosCommand
-
-from source.error_handler import error_handler
-
 from telegram import (
     Update
     )
@@ -21,22 +14,26 @@ from telegram import (
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
-    CallbackContext,
-    ChatJoinRequestHandler,
+    TypeHandler,
     filters
 )
+
+from source.start import StartCommand
+from source.book import GROUP_CHAT_ID, BookCommand
+from source.unbook import UnbookCommand
+from source.whos import WhosCommand
+
+from source.error_handler import error_handler
+from source.middleware import GrAuthMiddleware
+
 
 load_dotenv("config.env")
 GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID')
 
-# Обработчики отдельных комманд
-async def chat_join(update: Update, context: CallbackContext):
-    pass
-
-
 def main():
 
     token = os.getenv("BOT_API")
+    group_cheker = GrAuthMiddleware(GROUP_CHAT_ID)
 
     s = StartCommand()
     b = BookCommand()
@@ -47,19 +44,14 @@ def main():
     app = (
         ApplicationBuilder()
         .token(token)
-#        .read_timeout(10)
-#        .get_updates_read_timeout(10)
-#        .concurrent_updates(concurrent_updates=False)
         .build()
     )
 
     start_handler = CommandHandler("start", s.start, filters=filters.COMMAND)
-    start_conv = s.conversation(entry=[start_handler])
 
     book_seat_handler = CommandHandler("book", b.dates, filters=filters.COMMAND)
     book_seat_conv = b.conversation(entry=[book_seat_handler])
 
-#    FIXME: переименовать unbook в myseats command
     unbook_seat_handler = CommandHandler("myseats", ub.check_my_seats, filters=filters.COMMAND)
     unbook_seat_conv = ub.conversation(entry=[unbook_seat_handler])
 
@@ -68,11 +60,12 @@ def main():
 
     help_handler = CommandHandler("help", s.help, filters=filters.COMMAND)
 
-    chat_join_handler = ChatJoinRequestHandler(callback=chat_join, chat_id=GROUP_CHAT_ID, block=False)
-
-    app.add_handlers([start_conv, book_seat_conv, unbook_seat_conv, whos_conv])
+    app.add_handler(TypeHandler(Update, group_cheker.check_group), group=1)
+    app.add_handler(start_handler)
+    app.add_handlers([book_seat_conv, unbook_seat_conv, whos_conv])
     app.add_handler(help_handler)
     app.add_error_handler(error_handler)
+    # Добавляем middleware
 
     app.run_polling()
 
@@ -83,7 +76,7 @@ if __name__ == "__main__":
 
     logger.remove()
     logger.add(sys.stdout, 
-               format=fmt, 
+               format=fmt,
                level="TRACE", 
                colorize=True,
                catch=True)
@@ -98,7 +91,6 @@ if __name__ == "__main__":
         backtrace=False,
         diagnose=False,
         catch=False, 
-        #serialize=True
     )
 
     # отдельный логгер для ошибок
@@ -111,7 +103,6 @@ if __name__ == "__main__":
         backtrace=True,
         diagnose=True,
         catch=True, 
-        #serialize=True
     )
 
     main()

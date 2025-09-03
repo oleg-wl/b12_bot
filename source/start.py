@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
 import datetime
-import json
+import json, os
 
 from telegram import CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from loguru import logger
@@ -120,8 +120,6 @@ class CoreCommand(ABC):
 
 class StartCommand(CoreCommand):
 
-    STAGE_AUTH = 1
-
     def __init__(self):
         super().__init__()
 
@@ -129,52 +127,39 @@ class StartCommand(CoreCommand):
         return super().__repr__()
 
     async def start(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        # По команде /start первичная авторизация. Если пароль верный, чатайди запишем в базу и повторная авториация будет не нужна 
+        """Команда /start. Пишет в базу юзера. Проверка на уровке middleware должен быть в чате"""
 
         _username, _chat_id, context_logger = self._initialisation(update=update)
 
         _check_group_chat: int | None = await self._check_group(update=update, context=context)
-        if _check_group_chat: return ConversationHandler.END
+        if _check_group_chat:
+            return ConversationHandler.END
 
         # проверить, что юзер уже есть в БД по чатайди
         user = database.check_user_chat_id(engine=database.engine, chat_id=_chat_id)
-
-        if user:
+        member = await context.bot.get_chat_member(
+            chat_id=os.getenv('GROUP_CHAT_ID'), 
+            user_id=_chat_id
+        )
+        logger.info(f'user: {_username}, member: {member.status}')
+        if user and member.status !='left':
             context_logger.success('/Start command in private chat')
             await context.bot.send_message(
                 chat_id=_chat_id,
-                text=f"Привет {_username}, рад снова видеть тебя.\n/book - для бронирования места\n/myseats - твои места\n/whois - посмотреть кто занял место (в разработке)",
+                text=f"Привет {_username}, рад снова видеть тебя.\n/book - для бронирования места\n/myseats - твои места\n/whois - посмотреть кто занял место",
             )
-            return ConversationHandler.END
 
         # если юзера нет попросить пароль
-        elif user == None:
-            logger.success('/Start in private chat - try auth')
-            await context.bot.send_message(
-                chat_id=_chat_id,
-                text=f"Привет {_username}, для работы тебе надо авторизоваться. Введи пароль",
-            )
-            # на шаге авторизации MessageHandler проверит пароль
-            return self.STAGE_AUTH
-
-    async def auth(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-
-        _username, _chat_id, context_logger = StartCommand._initialisation(update=update)
-        
-        now = datetime.datetime.now()
-
-        first_name = update.effective_chat.first_name
-        last_name = update.effective_chat.last_name
-
-        # fixed: заменить юзернейм именем если юзернейм None
-        username = _username if _username is not None else first_name
-
-        passwd = update.message.text
-
-        access = database.check_password(engine=database.engine, password=passwd)
-        context_logger.info('auth trying')
-        if access:
+        elif user is None and member.status != 'left':
             try:
+                now = datetime.datetime.now()
+
+                first_name = update.effective_chat.first_name
+                last_name = update.effective_chat.last_name
+
+                # fixed: заменить юзернейм именем если юзернейм None
+                username = _username if _username is not None else first_name
+
                 database.insert_user(
                     engine=database.engine,
                     chat_id=_chat_id,
@@ -183,34 +168,27 @@ class StartCommand(CoreCommand):
                     lastname=last_name,
                     created_at=now,
                 )
+                logger.success('Password correct. chat_id:{}, username:{}, firstname:{} inserted', _chat_id, username, first_name)
+
+                logger.success('/Start in private chat - try auth')
                 await context.bot.send_message(
-                    chat_id=_chat_id, text="Аксес грандед"
+                    chat_id=_chat_id,
+                    text=f"Привет {_username}, ты есть в чате, можешь пользоваться ботом",
                 )
-                context_logger.success('Password correct. chat_id:{}, username:{}, firstname:{} inserted', _chat_id, username, first_name)
-                return ConversationHandler.END
-
+            
             except Exception as e:
-                context_logger.exception(e)
+                logger.exception(e)
                 await context.bot.send_message(chat_id=_chat_id, text="some error")
-                return ConversationHandler.END
-        else:
-            context_logger.warning('Password incorrect. pass: {}, chat_id:{}, username:{}, firstname:{} inserted', passwd, _chat_id, username, first_name)
-            await context.bot.send_message(chat_id=_chat_id, text='Неверный пароль попробуй еще раз')
-            return self.STAGE_AUTH
+        else: 
+            context_logger.info('попытка доступа без прав')
+            await context.bot.send_message(
+                chat_id=_chat_id,
+                text='sorry'
+            )
+    def conversation(self, entry):
+        #dummy
+        return super().conversation(entry)
 
-
-    def conversation(self, entry: list[CommandHandler]) -> ConversationHandler:
-
-        conversation = ConversationHandler(
-            entry_points=entry,
-            states={
-                self.STAGE_AUTH: [
-                    MessageHandler(callback=self.auth, filters=(~filters.COMMAND)),
-                ],
-            },
-            fallbacks=entry,
-        )
-        return conversation
     
     async def help(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
 
