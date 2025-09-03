@@ -24,7 +24,7 @@ from source.unbook import UnbookCommand
 from source.whos import WhosCommand
 
 from source.error_handler import error_handler
-from source.middleware import GrAuthMiddleware
+from source.middleware import GrAuthMiddleware, ChatMembershipMiddleware
 
 
 load_dotenv("config.env")
@@ -33,7 +33,7 @@ GROUP_CHAT_ID = os.getenv('GROUP_CHAT_ID')
 def main():
 
     token = os.getenv("BOT_API")
-    group_cheker = GrAuthMiddleware(GROUP_CHAT_ID)
+    group_cheker = ChatMembershipMiddleware(GROUP_CHAT_ID)
 
     s = StartCommand()
     b = BookCommand()
@@ -60,12 +60,12 @@ def main():
 
     help_handler = CommandHandler("help", s.help, filters=filters.COMMAND)
 
-    app.add_handler(TypeHandler(Update, group_cheker.check_group), group=1)
+    # Добавляем middleware
+    # app.add_handler(TypeHandler(Update, group_cheker), group=1)
     app.add_handler(start_handler)
     app.add_handlers([book_seat_conv, unbook_seat_conv, whos_conv])
     app.add_handler(help_handler)
     app.add_error_handler(error_handler)
-    # Добавляем middleware
 
     app.run_polling()
 

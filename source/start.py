@@ -79,6 +79,8 @@ class CoreCommand(ABC):
         """
         Метод для проверки, что запущена команда бота в групповом чате. Заглушка чтобы не пускать в групповой чат спамить
 
+        v2.0 добавлена проверка на участие в группе. кого нет в группе бот не доступен
+
         :param Update update: update class
         :param ContextTypes.DEFAULT_TYPE context: context class
         :return bool: 1 - если бот запущен в группе, 0 - если бот в личном чате
@@ -97,6 +99,17 @@ class CoreCommand(ABC):
             )
             logger.info('попытка написать в групповой чат {}', message_id)
             return True
+        
+        
+        member = await context.bot.get_chat_member(
+            chat_id=os.getenv('GROUP_CHAT_ID'), 
+            user_id=update.effective_user.id
+        )
+
+        if member.status == 'left':
+            logger.info(f'user: {update.effective_user.id}, member: {member.status}')
+            return True
+
         return False
 
     
