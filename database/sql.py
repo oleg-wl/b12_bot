@@ -1,6 +1,6 @@
 import locale
 
-#locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
+locale.setlocale(locale.LC_TIME, "ru_RU.UTF-8")
 
 import datetime
 from typing import Sequence, Tuple
